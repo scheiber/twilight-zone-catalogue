@@ -62,10 +62,6 @@
       padding: 0;
     }
 
-    html {
-      scroll-behavior: smooth;
-    }
-
     body {
       font-family: 'Inter', sans-serif;
       background: var(--paper);
@@ -259,6 +255,27 @@
     .search-input:focus {
       outline: none;
       border-bottom-color: var(--accent);
+    }
+
+    .search-clear {
+      background: transparent;
+      border: none;
+      color: var(--ink-faint);
+      font-size: 1.25rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 4px 8px;
+      margin-left: -4px;
+      transition: color 0.15s;
+      display: none;
+    }
+
+    .search-clear:hover {
+      color: var(--accent);
+    }
+
+    .search-wrap.has-content .search-clear {
+      display: inline-block;
     }
 
     .random-btn {
@@ -1187,6 +1204,7 @@
       <div class="search-wrap">
         <span class="search-label">Find</span>
         <input id="tz-search" class="search-input" type="text" placeholder="title, cast, writer, director, plot...">
+        <button id="tz-search-clear" class="search-clear" aria-label="Clear search" title="Clear search">×</button>
       </div>
       <div class="sort-wrap">
         <span class="sort-label">Sort</span>
@@ -1196,7 +1214,7 @@
           <option value="season">Season Order</option>
         </select>
       </div>
-      <button id="tz-random-btn" class="random-btn">Enter at Random ▸</button>
+      <button id="tz-random-btn" class="random-btn">Random Episode ▸</button>
     </div>
   </section>
 
@@ -1477,9 +1495,10 @@
             });
             searchEl.value = actor;
             currentQuery = actor;
+            updateClearVisibility();
             renderGrid();
             writeUrlState();
-            document.querySelector('.controls').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            window.scrollTo({ top: 0 });
           });
         });
 
@@ -1547,14 +1566,30 @@
         writeUrlState();
       });
 
+      const searchWrap = searchEl.closest('.search-wrap');
+      const searchClear = document.getElementById('tz-search-clear');
+      const updateClearVisibility = () => {
+        searchWrap.classList.toggle('has-content', searchEl.value.length > 0);
+      };
+
       let searchTimer;
       searchEl.addEventListener('input', (e) => {
+        updateClearVisibility();
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
           currentQuery = e.target.value.trim();
           renderGrid();
           writeUrlState();
         }, 120);
+      });
+
+      searchClear.addEventListener('click', () => {
+        searchEl.value = '';
+        currentQuery = '';
+        updateClearVisibility();
+        renderGrid();
+        writeUrlState();
+        searchEl.focus();
       });
 
       sortEl.addEventListener('change', (e) => {
@@ -1578,6 +1613,7 @@
         currentQuery = '';
         searchEl.value = '';
         sortEl.value = 'air';
+        updateClearVisibility();
         seasonBar.querySelectorAll('.season-btn').forEach(b => {
           b.classList.toggle('active', b.getAttribute('data-season') === 'all');
         });
@@ -1655,6 +1691,7 @@
         });
         sortEl.value = currentSort;
         searchEl.value = currentQuery;
+        updateClearVisibility();
 
         renderGrid();
 
@@ -1697,12 +1734,17 @@
 
         const writerCounts = {};
         const directorCounts = {};
+        const actorCounts = {};
         episodes.forEach(ep => {
           normalizeWriter(ep.written_by).forEach(w => {
             writerCounts[w] = (writerCounts[w] || 0) + 1;
           });
           const d = (ep.directed_by || '').trim();
           if (d) directorCounts[d] = (directorCounts[d] || 0) + 1;
+          (ep.cast || []).forEach(a => {
+            const name = (a || '').trim();
+            if (name) actorCounts[name] = (actorCounts[name] || 0) + 1;
+          });
         });
 
         const topN = (counts, n) => Object.entries(counts)
@@ -1725,7 +1767,7 @@
       </ul>
     `;
 
-        const totalYears = 'Est. 1959 — Concluded 1964';
+        const totalYears = 'Est. 1959, Concluded 1964';
 
         statsGrid.innerHTML = `
       <div class="stat-block">
@@ -1752,18 +1794,26 @@
         <div class="stat-label">Most Prolific Directors</div>
         ${mkList(topN(directorCounts, 5))}
       </div>
+      <div class="stat-block">
+        <div class="stat-label">Most Prolific Actors</div>
+        ${mkList(topN(actorCounts, 5))}
+      </div>
     `;
 
         // Clicking a writer/director name searches for them; clicking a season
         // switches to that season tab. Scroll up to show the result.
+        // We use instant (not smooth) scroll because smooth scroll can be
+        // interrupted when the grid shrinks dramatically during a filter, which
+        // changes the document height mid-animation.
         statsGrid.querySelectorAll('.stat-name[data-search]').forEach(el => {
           el.addEventListener('click', () => {
             const q = el.getAttribute('data-search');
             searchEl.value = q;
             currentQuery = q;
+            updateClearVisibility();
             renderGrid();
             writeUrlState();
-            document.querySelector('.controls').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            window.scrollTo({ top: 0 });
           });
         });
         statsGrid.querySelectorAll('.stat-name[data-season]').forEach(el => {
@@ -1775,7 +1825,7 @@
             currentSeason = s;
             renderGrid();
             writeUrlState();
-            document.querySelector('.controls').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            window.scrollTo({ top: 0 });
           });
         });
 
