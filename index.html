@@ -62,6 +62,17 @@
       padding: 0;
     }
 
+    a {
+      color: rgb(179, 179, 179);
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    a:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
     body {
       font-family: 'Inter', sans-serif;
       background: var(--paper);
@@ -154,6 +165,7 @@
 
     .masthead:hover {
       opacity: 0.75;
+      color: var(--accent);
     }
 
     .masthead em {
@@ -1173,14 +1185,12 @@
         <div class="eyebrow">Submitted for your approval</div>
         <h1 class="masthead" id="tz-masthead" title="Reset filters and show all episodes">The Twilight Zone
           Catalogue<em>.</em></h1>
-        <p class="dek">A complete catalogue of the original series, 1959 to 1964. One hundred and fifty-six excursions
-          into a dimension not only of sight and sound, but of mind.</p>
+        <p class="dek">A complete interactive catalogue of the classic original series that aired from 1959 to 1964. One
+          hundred
+          and fifty-six excursions into a dimension not only of sight and sound, but of mind.</p>
       </div>
       <div class="colophon">
-        <strong>Vol. I</strong><br>
-        Est. 1959<br>
-        CBS Television<br>
-        Rod Serling, Host<br>
+        Created by <a href="https://scheiber.dev" target="_blank" rel="noopener noreferrer">Jonathan Scheiber</a><br>
         <button id="tz-theme-toggle" class="theme-toggle" aria-label="Toggle theme">
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
             stroke-linecap="round">
@@ -1202,7 +1212,7 @@
   <section class="controls">
     <div class="controls-inner">
       <div class="search-wrap">
-        <span class="search-label">Find</span>
+        <span class="search-label">Search</span>
         <input id="tz-search" class="search-input" type="text" placeholder="title, cast, writer, director, plot...">
         <button id="tz-search-clear" class="search-clear" aria-label="Clear search" title="Clear search">×</button>
       </div>
@@ -1237,13 +1247,14 @@
   <section class="stats-panel" id="tz-stats" style="display: none;">
     <div class="stats-header">
       <h2 class="stats-title">Behind the Catalogue</h2>
-      <span class="stats-tagline">Notes on the Collection</span>
+      <span class="stats-tagline">Episode Statistics</span>
     </div>
     <div class="stats-grid" id="tz-stats-grid"></div>
   </section>
 
   <footer class="footer">
-    Data &middot; The Twilight Zone API &middot; A Journey of Sight and Sound
+    Data sourced from <a href="https://thetwilightzoneapi.netlify.app/" target="_blank" rel="noopener noreferrer">The
+      Twilight Zone API</a>.
   </footer>
 
   <div id="tz-modal-bg" class="modal-bg" role="dialog" aria-modal="true">
@@ -1285,6 +1296,17 @@
         return String(s)
           .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      };
+
+      // Scroll to just below the masthead, putting the controls bar at the
+      // top of the viewport. Used after name-click filters so the user lands
+      // looking at the populated search field and the new results, without
+      // re-seeing the (already-known) hero. This is preferable to scrolling
+      // all the way to top, which forces the user to scroll past the hero again.
+      const scrollPastMasthead = () => {
+        const hero = document.querySelector('.hero');
+        const target = hero ? hero.offsetHeight : 0;
+        window.scrollTo({ top: target });
       };
 
       // midnitereviews.com is suspended, so any URL pointing at it (including i*.wp.com
@@ -1498,7 +1520,7 @@
             updateClearVisibility();
             renderGrid();
             writeUrlState();
-            window.scrollTo({ top: 0 });
+            scrollPastMasthead();
           });
         });
 
@@ -1767,13 +1789,11 @@
       </ul>
     `;
 
-        const totalYears = 'Est. 1959, Concluded 1964';
-
         statsGrid.innerHTML = `
       <div class="stat-block">
         <div class="stat-label">The Series</div>
         <div class="stat-big">${episodes.length}</div>
-        <div class="stat-caption">Episodes across five seasons. ${totalYears}. Hosted and largely written by Rod Serling for CBS.</div>
+        <div class="stat-caption">episodes across five seasons from 1959 to 1964. Hosted and largely written by Rod Serling for CBS.</div>
       </div>
       <div class="stat-block">
         <div class="stat-label">By Season</div>
@@ -1813,7 +1833,7 @@
             updateClearVisibility();
             renderGrid();
             writeUrlState();
-            window.scrollTo({ top: 0 });
+            scrollPastMasthead();
           });
         });
         statsGrid.querySelectorAll('.stat-name[data-season]').forEach(el => {
@@ -1825,7 +1845,7 @@
             currentSeason = s;
             renderGrid();
             writeUrlState();
-            window.scrollTo({ top: 0 });
+            scrollPastMasthead();
           });
         });
 
