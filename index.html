@@ -923,10 +923,11 @@
       }
 
       .modal-subtitle {
-        font-family: "Playfair Display", serif;
-        font-style: italic;
+        font-family: "Inter", serif;
+        font-weight: 600;
+        font-size: 12px;
+                text-transform: uppercase;
         color: var(--ink-dim);
-        font-size: 1.05rem;
         margin-bottom: 32px;
       }
 
@@ -1337,9 +1338,7 @@
         target="_blank"
         rel="noopener noreferrer"
       >
-        The Twilight Zone API
-      </a>
-      .
+        The Twilight Zone API</a>.
     </footer>
 
     <div id="tz-modal-bg" class="modal-bg" role="dialog" aria-modal="true">
@@ -1584,7 +1583,7 @@
           modalContent.innerHTML = `
       ${renderImageOrPlaceholder(ep, "modal-hero")}
       <div class="modal-body">
-        <div class="modal-tag">Season ${ep.season} &middot; Episode ${ep.episode} &middot; ${escapeHtml(ep.air_year)}</div>
+        <div class="modal-tag">Season ${ep.season} &middot; Episode ${ep.episode}</div>
         <h2 class="modal-title">${escapeHtml(ep.title)}</h2>
         <div class="modal-subtitle">First broadcast ${escapeHtml(formatAirDate(ep.air_date))}</div>
 
