@@ -10,6 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Inter:wght@300;400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
     <style>
       /* Dark theme (default) */
       :root,
@@ -451,7 +452,7 @@
 
       .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        grid-template-columns: repeat(3, 1fr);
         gap: 2px;
         background: var(--rule);
         border: 1px solid var(--rule);
@@ -1009,6 +1010,30 @@
         background: var(--paper);
       }
 
+      .themes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .theme-tag {
+        font-family: "Inter", sans-serif;
+        font-size: 0.82rem;
+        font-style: italic;
+        color: var(--accent-warm);
+        background: var(--paper-3);
+        border: 1px solid var(--rule);
+        padding: 5px 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .theme-tag:hover {
+        border-color: var(--accent-warm);
+        color: var(--ink);
+        background: var(--paper);
+      }
+
       .narration {
         font-family: "Playfair Display", serif;
         font-style: italic;
@@ -1163,7 +1188,10 @@
         z-index: 1001;
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.3s, color 0.2s, border-color 0.2s;
+        transition:
+          opacity 0.3s,
+          color 0.2s,
+          border-color 0.2s;
       }
 
       .top-btn.visible {
@@ -1197,6 +1225,10 @@
         .seasons {
           padding: 20px 24px;
           gap: 18px;
+        }
+
+        .stats-grid {
+          grid-template-columns: 1fr;
         }
 
         .grid-wrap {
@@ -1310,7 +1342,7 @@
             id="tz-search"
             class="search-input"
             type="text"
-            placeholder="title, cast, writer, director, plot..."
+            placeholder="title, cast, writer, director, theme, plot..."
           />
           <button
             id="tz-search-clear"
@@ -1368,7 +1400,14 @@
       </a>
     </footer>
 
-    <button id="tz-top-btn" class="top-btn" aria-label="Back to top" title="Back to top">↑</button>
+    <button
+      id="tz-top-btn"
+      class="top-btn"
+      aria-label="Back to top"
+      title="Back to top"
+    >
+      ↑
+    </button>
 
     <div id="tz-modal-bg" class="modal-bg" role="dialog" aria-modal="true">
       <article class="modal" id="tz-modal">
@@ -1395,9 +1434,9 @@
 
     <script>
       (function () {
-        const API =
-          "https://twilight-zone-api-production.up.railway.app/episodes";
-        // const API = "http://localhost:3000/episodes";
+        // const API =
+        //   "https://twilight-zone-api-production.up.railway.app/episodes";
+        const API = "http://localhost:3000/episodes";
         const grid = document.getElementById("tz-grid");
         const status = document.getElementById("tz-status");
         const countEl = document.getElementById("tz-count");
@@ -1510,6 +1549,7 @@
             ep.written_by,
             ep.storyline,
             (ep.cast || []).join(" "),
+            (ep.theme || []).join(" "),
           ]
             .join(" ")
             .toLowerCase();
@@ -1637,6 +1677,15 @@
         <div class="section-label">Cast</div>
         <div class="cast">${cast || '<em style="color: var(--ink-faint)">Not listed</em>'}</div>
 
+        ${
+          ep.theme && ep.theme.length
+            ? `
+        <div class="section-label">Themes</div>
+        <div class="themes">${ep.theme.map((t) => `<span class="theme-tag" data-theme="${escapeHtml(t)}" title="See other episodes with this theme">${escapeHtml(t)}</span>`).join("")}</div>
+        `
+            : ""
+        }
+
         <div class="section-label">Opening Narration</div>
         <div class="narration hidden" data-reveal="1">
           <span class="narration-text">${escapeHtml(ep.opening_narration)}</span>
@@ -1678,6 +1727,28 @@
                 });
                 searchEl.value = actor;
                 currentQuery = actor;
+                updateClearVisibility();
+                renderGrid();
+                writeUrlState();
+                scrollPastMasthead();
+              });
+            });
+
+          modalContent
+            .querySelectorAll(".theme-tag[data-theme]")
+            .forEach((chip) => {
+              chip.addEventListener("click", () => {
+                const theme = chip.getAttribute("data-theme");
+                closeModal();
+                currentSeason = "all";
+                seasonBar.querySelectorAll(".season-btn").forEach((b) => {
+                  b.classList.toggle(
+                    "active",
+                    b.getAttribute("data-season") === "all",
+                  );
+                });
+                searchEl.value = theme;
+                currentQuery = theme;
                 updateClearVisibility();
                 renderGrid();
                 writeUrlState();
@@ -1965,6 +2036,7 @@
           const writerCounts = {};
           const directorCounts = {};
           const actorCounts = {};
+          const themeCounts = {};
           episodes.forEach((ep) => {
             normalizeWriter(ep.written_by).forEach((w) => {
               writerCounts[w] = (writerCounts[w] || 0) + 1;
@@ -1974,6 +2046,10 @@
             (ep.cast || []).forEach((a) => {
               const name = (a || "").trim();
               if (name) actorCounts[name] = (actorCounts[name] || 0) + 1;
+            });
+            (ep.theme || []).forEach((t) => {
+              const theme = (t || "").trim();
+              if (theme) themeCounts[theme] = (themeCounts[theme] || 0) + 1;
             });
           });
 
@@ -2035,6 +2111,10 @@
       <div class="stat-block">
         <div class="stat-label">Most Prolific Actors</div>
         ${mkList(topN(actorCounts, 5))}
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Most Common Themes</div>
+        ${mkList(topN(themeCounts, 8))}
       </div>
     `;
 
