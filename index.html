@@ -415,6 +415,53 @@
         }
       }
 
+      /* On mobile, nav arrows become a sticky bottom bar inside .modal-bg */
+      .modal-nav-bar {
+        display: none;
+      }
+
+      @media (max-width: 620px) {
+        .modal-nav-bar {
+          position: sticky;
+          bottom: 0;
+          display: flex;
+          z-index: 210;
+        }
+
+        .modal-nav-bar .modal-nav {
+          position: static;
+          transform: none;
+          flex: 1;
+          height: 52px;
+          border-radius: 0;
+          border: none;
+          border-top: 1px solid var(--rule-bright);
+          background: var(--paper-2);
+          font-size: 22px;
+        }
+
+        .modal-nav-bar .modal-nav.prev {
+          border-right: 1px solid var(--rule);
+        }
+
+        .modal {
+          margin-bottom: 0;
+        }
+
+        /* Hide back-to-top when the modal is open so it doesn't float over everything */
+        .top-btn.modal-active {
+          opacity: 0 !important;
+          pointer-events: none !important;
+        }
+      }
+
+      /* Hide the original in-modal buttons on mobile (they move to the bar) */
+      @media (max-width: 620px) {
+        .modal > .modal-nav {
+          display: none;
+        }
+      }
+
       /* ============ STATS PANEL ============ */
       .stats-panel {
         max-width: 1400px;
@@ -1430,6 +1477,10 @@
         <button class="modal-close" id="tz-close" aria-label="Close">×</button>
         <div id="tz-modal-content"></div>
       </article>
+      <div class="modal-nav-bar" id="tz-modal-nav-bar">
+        <button class="modal-nav prev" id="tz-bar-prev" aria-label="Previous episode">‹</button>
+        <button class="modal-nav next" id="tz-bar-next" aria-label="Next episode">›</button>
+      </div>
     </div>
 
     <script>
@@ -1763,6 +1814,7 @@
           currentModalId = ep.id;
           updateNavButtons();
           modalBg.classList.add("open");
+          topBtn.classList.add("modal-active");
           modalBg.scrollTop = 0;
           document.body.style.overflow = "hidden";
           writeUrlState();
@@ -1786,6 +1838,11 @@
           const idx = list.findIndex((e) => e.id === currentModalId);
           prevBtn.disabled = idx <= 0;
           nextBtn.disabled = idx < 0 || idx >= list.length - 1;
+          // Sync the mobile bottom-bar duplicates
+          const bp = document.getElementById("tz-bar-prev");
+          const bn = document.getElementById("tz-bar-next");
+          if (bp) bp.disabled = prevBtn.disabled;
+          if (bn) bn.disabled = nextBtn.disabled;
         };
 
         const navigateModal = (direction) => {
@@ -1800,6 +1857,7 @@
 
         const closeModal = () => {
           modalBg.classList.remove("open");
+          topBtn.classList.remove("modal-active");
           document.body.style.overflow = "";
           currentModalId = null;
           writeUrlState();
@@ -1807,6 +1865,12 @@
 
         prevBtn.addEventListener("click", () => navigateModal(-1));
         nextBtn.addEventListener("click", () => navigateModal(1));
+
+        // Mobile bottom-bar nav buttons (duplicates that live outside .modal)
+        const barPrev = document.getElementById("tz-bar-prev");
+        const barNext = document.getElementById("tz-bar-next");
+        barPrev.addEventListener("click", () => navigateModal(-1));
+        barNext.addEventListener("click", () => navigateModal(1));
 
         closeBtn.addEventListener("click", closeModal);
         modalBg.addEventListener("click", (e) => {
