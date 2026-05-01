@@ -173,7 +173,6 @@
       }
 
       .masthead:hover {
-        opacity: 0.75;
         color: var(--accent);
       }
 
@@ -462,39 +461,38 @@
         }
       }
 
-      /* ============ STATS PANEL ============ */
-      .stats-panel {
+      /* ============ STATS DRAWER ============ */
+      .stats-toggle-btn {
+        margin-top: 8px;
+      }
+
+      .stats-toggle-btn[aria-expanded="true"] {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .stats-drawer {
+        overflow: hidden;
+        max-height: 0;
+        transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+        border-bottom: 1px solid var(--rule);
+        background: var(--paper-2);
+      }
+
+      .stats-drawer.open {
+        max-height: 2000px;
+      }
+
+      .stats-drawer-inner {
         max-width: 1400px;
         margin: 0 auto;
-        padding: 48px 48px 0;
-        border-top: 1px solid var(--rule);
+        padding: 36px 48px 40px;
       }
 
-      .stats-header {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        margin-bottom: 24px;
-        gap: 24px;
-        flex-wrap: wrap;
-      }
-
-      .stats-title {
-        font-family: "Playfair Display", serif;
-        font-weight: 900;
-        font-style: italic;
-        font-size: 1.8rem;
-        color: var(--ink);
-        letter-spacing: -0.01em;
-      }
-
-      .stats-tagline {
-        font-family: "Inter", sans-serif;
-        font-weight: 600;
-        font-size: 10px;
-        letter-spacing: 0.16em;
-        color: var(--ink-faint);
-        text-transform: uppercase;
+      @media (max-width: 820px) {
+        .stats-drawer-inner {
+          padding: 28px 24px 32px;
+        }
       }
 
       .stats-grid {
@@ -550,7 +548,7 @@
       }
 
       .stat-name {
-        font-family: "Playfair Display", serif;
+        font-family: "Inter", serif;
         font-size: 0.98rem;
         color: var(--ink);
         cursor: pointer;
@@ -563,10 +561,10 @@
 
       .stat-count {
         font-family: "Inter", sans-serif;
-        font-size: 11px;
-        letter-spacing: 0.15em;
+        font-size: 0.85rem;
         color: var(--accent);
-        flex-shrink: 0;
+        cursor: pointer;
+        transition: color 0.15s;
       }
 
       .stat-big {
@@ -833,7 +831,7 @@
           gap: 6px;
         }
 
-        .modal-collection-actions .collect-btn {
+        .modal-collection-actions .collect-btn .modal-close {
           width: 32px;
           height: 32px;
         }
@@ -1464,10 +1462,6 @@
           padding: 28px 24px 60px;
         }
 
-        .stats-panel {
-          padding: 32px 24px 0;
-        }
-
         .modal-body {
           padding: 0 24px 32px;
         }
@@ -1527,6 +1521,28 @@
             Jonathan Scheiber
           </a>
           <br />
+          <button
+            id="tz-stats-toggle"
+            class="theme-toggle stats-toggle-btn"
+            aria-label="Toggle Behind the Catalogue"
+            aria-expanded="false"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              style="width: 14px; height: 14px; flex-shrink: 0"
+            >
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+            </svg>
+            <span>Behind the Catalogue</span>
+          </button>
           <button
             id="tz-theme-toggle"
             class="theme-toggle"
@@ -1677,18 +1693,16 @@
       <span class="count" id="tz-count"></span>
     </nav>
 
+    <div class="stats-drawer" id="tz-stats-drawer">
+      <div class="stats-drawer-inner">
+        <div class="stats-grid" id="tz-stats-grid"></div>
+      </div>
+    </div>
+
     <main class="grid-wrap">
       <div id="tz-grid" class="grid"></div>
       <div id="tz-status" class="status">Tuning the signal...</div>
     </main>
-
-    <section class="stats-panel" id="tz-stats" style="display: none">
-      <div class="stats-header">
-        <h2 class="stats-title">Behind the Catalogue</h2>
-        <span class="stats-tagline">Episode Statistics</span>
-      </div>
-      <div class="stats-grid" id="tz-stats-grid"></div>
-    </section>
 
     <footer class="footer">
       Data sourced from
@@ -1753,7 +1767,7 @@
       (function () {
         const API =
           "https://twilight-zone-api-production.up.railway.app/episodes";
-        // const API = "http://localhost:3000/episodes";
+        // const API = "http://localhost:3000/episodes"
         const grid = document.getElementById("tz-grid");
         const status = document.getElementById("tz-status");
         const countEl = document.getElementById("tz-count");
@@ -1766,8 +1780,15 @@
         const prevBtn = document.getElementById("tz-prev");
         const nextBtn = document.getElementById("tz-next");
         const randomBtn = document.getElementById("tz-random-btn");
-        const statsPanel = document.getElementById("tz-stats");
+        const statsPanel = document.getElementById("tz-stats-drawer");
+        const statsToggleBtn = document.getElementById("tz-stats-toggle");
         const statsGrid = document.getElementById("tz-stats-grid");
+
+        // Toggle the Behind the Catalogue drawer
+        statsToggleBtn.addEventListener("click", () => {
+          const isOpen = statsPanel.classList.toggle("open");
+          statsToggleBtn.setAttribute("aria-expanded", String(isOpen));
+        });
 
         let episodes = [];
         let currentSeason = "all";
@@ -2611,23 +2632,6 @@
         </ul>
       </div>
       <div class="stat-block">
-        <div class="stat-label">Your Collections</div>
-        <ul class="stat-list">
-          <li>
-            <span class="stat-name" data-collection="favorites">Favorites</span>
-            <span class="stat-count">${favorites.size}</span>
-          </li>
-          <li>
-            <span class="stat-name" data-collection="watchlist">Watchlist</span>
-            <span class="stat-count">${watchlist.size}</span>
-          </li>
-          <li>
-            <span class="stat-name" data-collection="must-watch">Must Watch</span>
-            <span class="stat-count">${episodes.filter((e) => e.must_watch).length}</span>
-          </li>
-        </ul>
-      </div>
-      <div class="stat-block">
         <div class="stat-label">Most Prolific Writers</div>
         ${mkList(topN(writerCounts, 5))}
       </div>
@@ -2650,6 +2654,11 @@
           // We use instant (not smooth) scroll because smooth scroll can be
           // interrupted when the grid shrinks dramatically during a filter, which
           // changes the document height mid-animation.
+          const closeDrawer = () => {
+            statsPanel.classList.remove("open");
+            statsToggleBtn.setAttribute("aria-expanded", "false");
+          };
+
           statsGrid
             .querySelectorAll(".stat-name[data-search]")
             .forEach((el) => {
@@ -2660,6 +2669,7 @@
                 updateClearVisibility();
                 renderGrid();
                 writeUrlState();
+                closeDrawer();
                 scrollPastMasthead();
               });
             });
@@ -2677,6 +2687,7 @@
                 currentSeason = s;
                 renderGrid();
                 writeUrlState();
+                closeDrawer();
                 scrollPastMasthead();
               });
             });
@@ -2697,11 +2708,12 @@
                 currentSeason = collection;
                 renderGrid();
                 writeUrlState();
+                closeDrawer();
                 scrollPastMasthead();
               });
             });
 
-          statsPanel.style.display = "block";
+          statsToggleBtn.removeAttribute("disabled");
         };
 
         fetch(API)
