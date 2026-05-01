@@ -18,9 +18,9 @@
         --ink: #e8e4db;
         --ink-dim: #8a8479;
         --ink-faint: #5a5550;
-        --paper: #0a0a0b;
-        --paper-2: #111113;
-        --paper-3: #18181c;
+        --paper: #060810;
+        --paper-2: #0d0f18;
+        --paper-3: #141620;
         --rule: #2a2a2e;
         --rule-bright: #3a3a40;
         --accent: #6be6d1;
@@ -35,7 +35,7 @@
         --reveal-gradient: linear-gradient(
           90deg,
           transparent,
-          rgba(10, 10, 11, 0.4),
+          rgba(6, 8, 16, 0.4),
           transparent
         );
       }
@@ -128,7 +128,100 @@
         );
       }
 
+      /* ============ STARFIELD (dark theme only) ============ */
+      /* Positions are injected by the starfield JS below on each page load */
+      @keyframes twinkle-a {
+        0%,
+        100% {
+          opacity: 0.45;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+      @keyframes twinkle-b {
+        0%,
+        100% {
+          opacity: 0.9;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+      @keyframes twinkle-c {
+        0%,
+        100% {
+          opacity: 0.6;
+        }
+        33% {
+          opacity: 1;
+        }
+        66% {
+          opacity: 0.35;
+        }
+      }
+
+      :root #starfield-a,
+      :root #starfield-b,
+      :root #starfield-c {
+        display: block;
+      }
+      [data-theme="light"] #starfield-a,
+      [data-theme="light"] #starfield-b,
+      [data-theme="light"] #starfield-c {
+        display: none;
+      }
+
+      #starfield-a,
+      #starfield-b,
+      #starfield-c {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        overflow: hidden;
+      }
+
+      #starfield-a::before,
+      #starfield-b::before {
+        content: "";
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        border-radius: 50%;
+        background: transparent;
+      }
+
+      #starfield-a::after,
+      #starfield-b::after {
+        content: "";
+        position: absolute;
+        width: 2px;
+        height: 2px;
+        border-radius: 50%;
+        background: transparent;
+      }
+
+      #starfield-c::before {
+        content: "";
+        position: absolute;
+        width: 2px;
+        height: 2px;
+        border-radius: 50%;
+        background: transparent;
+      }
+
+      #starfield-c::after {
+        content: "";
+        position: absolute;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: transparent;
+      }
+
       /* ============ HERO ============ */
+
       .hero {
         padding: 56px 48px 32px;
         border-bottom: 1px solid var(--rule);
@@ -1494,6 +1587,10 @@
   </head>
 
   <body>
+    <!-- Starfield: three layers of twinkling stars, dark theme only -->
+    <div id="starfield-a" aria-hidden="true"></div>
+    <div id="starfield-b" aria-hidden="true"></div>
+    <div id="starfield-c" aria-hidden="true"></div>
     <header class="hero">
       <div class="hero-grid">
         <div>
@@ -2730,6 +2827,83 @@
             status.textContent = "The signal is lost. " + err.message;
             status.className = "status error";
           });
+      })();
+    </script>
+
+    <script>
+      /* ── Randomised starfield generator ──────────────────────────────────
+         Runs once on load; generates random box-shadow lists for six
+         pseudo-elements across three #starfield divs.
+         W × H covers 2560 × 1600 to fill any common viewport.          */
+      (function () {
+        const W = 2560,
+          H = 1600;
+        const r = Math.random;
+
+        /* rgba colour helpers — slight blue-white tint */
+        function col(alpha) {
+          const base = [
+            [220, 230, 255],
+            [210, 225, 255],
+            [225, 235, 255],
+            [215, 228, 255],
+            [235, 243, 255],
+            [240, 248, 255],
+            [245, 250, 255],
+          ];
+          const c = base[Math.floor(r() * base.length)];
+          return (
+            "rgba(" +
+            c[0] +
+            "," +
+            c[1] +
+            "," +
+            c[2] +
+            "," +
+            alpha.toFixed(2) +
+            ")"
+          );
+        }
+
+        /* Generate n random box-shadow entries.
+           spread: fixed spread-radius in px.
+           alphaMin/Max: opacity range. */
+        function shadows(n, spread, alphaMin, alphaMax) {
+          const parts = [];
+          for (let i = 0; i < n; i++) {
+            const x = Math.floor(r() * W);
+            const y = Math.floor(r() * H);
+            const alpha = alphaMin + r() * (alphaMax - alphaMin);
+            parts.push(x + "px " + y + "px 0 " + spread + "px " + col(alpha));
+          }
+          return parts.join(", ");
+        }
+
+        const css = [
+          "#starfield-a::before { animation: twinkle-a 8s ease-in-out infinite; box-shadow: " +
+            shadows(90, 0, 0.65, 0.85) +
+            "; }",
+          "#starfield-a::after  { animation: twinkle-b 11s ease-in-out infinite; box-shadow: " +
+            shadows(40, 2, 0.6, 0.8) +
+            "; }",
+          "#starfield-b::before { animation: twinkle-b 6s ease-in-out infinite; box-shadow: " +
+            shadows(80, 1, 0.65, 0.85) +
+            "; }",
+          "#starfield-b::after  { animation: twinkle-a 9s ease-in-out infinite; box-shadow: " +
+            shadows(36, 2, 0.6, 0.8) +
+            "; }",
+          "#starfield-c::before { animation: twinkle-c 10s ease-in-out infinite; box-shadow: " +
+            shadows(44, 2, 0.65, 0.85) +
+            "; }",
+          "#starfield-c::after  { animation: twinkle-a 13s ease-in-out infinite; box-shadow: " +
+            shadows(20, 4, 0.55, 0.75) +
+            "; }",
+        ].join("\n");
+
+        const style = document.createElement("style");
+        style.id = "starfield-dynamic";
+        style.textContent = css;
+        document.head.appendChild(style);
       })();
     </script>
   </body>
