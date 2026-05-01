@@ -640,6 +640,37 @@
         background: var(--accent);
       }
 
+      /* Favorites/Watchlist buttons sit alongside the season numbers but are
+         visually grouped with a subtle leading separator and a slight inset. */
+      .season-btn-collection {
+        position: relative;
+        padding-left: 16px;
+        margin-left: 4px;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .season-btn-collection::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 4px;
+        bottom: 4px;
+        width: 1px;
+        background: var(--rule);
+      }
+
+      /* On wrap, the separator line looks weird; hide it on small screens */
+      @media (max-width: 600px) {
+        .season-btn-collection {
+          padding-left: 0;
+          margin-left: 0;
+        }
+        .season-btn-collection::before {
+          display: none;
+        }
+      }
+
       .count {
         margin-left: auto;
         font-family: "Inter", sans-serif;
@@ -712,6 +743,100 @@
       .card:hover .card-img-wrap img {
         filter: var(--img-filter-hover);
         transform: scale(1.03);
+      }
+
+      /* ============ COLLECTION BUTTONS (favorite / watchlist) ============ */
+      /* Sits in the top-right of each card image and in the modal header.
+         Two stacked buttons: bookmark (watchlist) and heart (favorite).
+         Default is outlined; "active" state is filled with the accent color. */
+      .collection-actions {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        z-index: 2;
+      }
+
+      .collect-btn {
+        width: 34px;
+        height: 34px;
+        background: rgba(10, 10, 11, 0.55);
+        border: 1px solid var(--rule-bright);
+        color: var(--ink);
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition:
+          color 0.2s,
+          border-color 0.2s,
+          background-color 0.2s,
+          transform 0.15s;
+        backdrop-filter: blur(2px);
+      }
+
+      [data-theme="light"] .collect-btn {
+        background: rgba(242, 237, 227, 0.7);
+      }
+
+      .collect-btn svg {
+        width: 16px;
+        height: 16px;
+        transition:
+          fill 0.2s,
+          stroke 0.2s;
+      }
+
+      .collect-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+        transform: scale(1.06);
+      }
+
+      .collect-btn.active {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+
+      .collect-btn.active svg {
+        fill: var(--accent);
+      }
+
+      /* Modal version is a bit larger and sits inline beside the close button */
+      .modal-collection-actions {
+        position: absolute;
+        top: 16px;
+        right: 64px;
+        display: flex;
+        gap: 8px;
+        z-index: 3;
+      }
+
+      .modal-collection-actions .collect-btn {
+        width: 36px;
+        height: 36px;
+        background: var(--paper);
+      }
+
+      .modal-collection-actions .collect-btn svg {
+        width: 17px;
+        height: 17px;
+      }
+
+      /* On very narrow screens, give the modal buttons a touch more room */
+      @media (max-width: 520px) {
+        .modal-collection-actions {
+          right: 58px;
+          gap: 6px;
+        }
+
+        .modal-collection-actions .collect-btn {
+          width: 32px;
+          height: 32px;
+        }
       }
 
       /* episode number tag overlay */
@@ -1081,6 +1206,63 @@
         background: var(--paper);
       }
 
+      /* ============ MUST WATCH ============ */
+      .must-watch-badge {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        z-index: 2;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: rgba(10, 10, 11, 0.72);
+        border: 1px solid var(--accent-warm);
+        color: var(--accent-warm);
+        font-family: "Inter", sans-serif;
+        font-weight: 600;
+        font-size: 9px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        padding: 4px 9px;
+        backdrop-filter: blur(2px);
+        pointer-events: none;
+      }
+
+      [data-theme="light"] .must-watch-badge {
+        background: rgba(242, 237, 227, 0.78);
+      }
+
+      .must-watch-badge svg {
+        width: 9px;
+        height: 9px;
+        flex-shrink: 0;
+        fill: var(--accent-warm);
+      }
+
+      /* Modal inline badge — sits beside the season/episode tag */
+      .must-watch-inline {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        color: var(--accent-warm);
+        font-family: "Inter", sans-serif;
+        font-weight: 600;
+        font-size: 10px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        border: 1px solid var(--accent-warm);
+        padding: 3px 9px;
+        margin-left: 12px;
+        vertical-align: middle;
+      }
+
+      .must-watch-inline svg {
+        width: 9px;
+        height: 9px;
+        flex-shrink: 0;
+        fill: var(--accent-warm);
+      }
+
       .narration {
         font-family: "Playfair Display", serif;
         font-style: italic;
@@ -1420,6 +1602,78 @@
       <button class="season-btn" data-season="3">3</button>
       <button class="season-btn" data-season="4">4</button>
       <button class="season-btn" data-season="5">5</button>
+      <button
+        class="season-btn season-btn-collection"
+        data-season="favorites"
+        title="Show your favorite episodes"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          style="
+            width: 13px;
+            height: 13px;
+            vertical-align: -2px;
+            margin-right: 4px;
+          "
+        >
+          <path
+            d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+          />
+        </svg>
+        Favorites
+      </button>
+      <button
+        class="season-btn season-btn-collection"
+        data-season="watchlist"
+        title="Show your watchlist"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          style="
+            width: 13px;
+            height: 13px;
+            vertical-align: -2px;
+            margin-right: 4px;
+          "
+        >
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+        </svg>
+        Watchlist
+      </button>
+      <button
+        class="season-btn season-btn-collection"
+        data-season="must-watch"
+        title="Show must-watch episodes"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          aria-hidden="true"
+          style="
+            width: 13px;
+            height: 13px;
+            vertical-align: -2px;
+            margin-right: 4px;
+          "
+        >
+          <path
+            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+          />
+        </svg>
+        Must Watch
+      </button>
       <span class="count" id="tz-count"></span>
     </nav>
 
@@ -1478,8 +1732,20 @@
         <div id="tz-modal-content"></div>
       </article>
       <div class="modal-nav-bar" id="tz-modal-nav-bar">
-        <button class="modal-nav prev" id="tz-bar-prev" aria-label="Previous episode">‹</button>
-        <button class="modal-nav next" id="tz-bar-next" aria-label="Next episode">›</button>
+        <button
+          class="modal-nav prev"
+          id="tz-bar-prev"
+          aria-label="Previous episode"
+        >
+          ‹
+        </button>
+        <button
+          class="modal-nav next"
+          id="tz-bar-next"
+          aria-label="Next episode"
+        >
+          ›
+        </button>
       </div>
     </div>
 
@@ -1508,6 +1774,142 @@
         let currentQuery = "";
         let currentSort = "air";
         let currentModalId = null;
+
+        // ============ COLLECTIONS (favorites + watchlist) ============
+        // Both lists are stored as arrays of episode IDs in localStorage. We use
+        // Sets in memory for quick membership checks. If localStorage is blocked
+        // (private mode, quota issues), the sets stay empty and writes silently
+        // no-op, which is the same pattern the theme toggle uses.
+        const FAVORITES_KEY = "tz-favorites";
+        const WATCHLIST_KEY = "tz-watchlist";
+
+        const loadCollection = (key) => {
+          try {
+            const raw = localStorage.getItem(key);
+            if (!raw) return new Set();
+            const arr = JSON.parse(raw);
+            if (!Array.isArray(arr)) return new Set();
+            return new Set(
+              arr.map((n) => parseInt(n, 10)).filter(Number.isFinite),
+            );
+          } catch {
+            return new Set();
+          }
+        };
+
+        const saveCollection = (key, set) => {
+          try {
+            localStorage.setItem(key, JSON.stringify([...set]));
+          } catch {
+            /* ignore quota / private mode errors */
+          }
+        };
+
+        const favorites = loadCollection(FAVORITES_KEY);
+        const watchlist = loadCollection(WATCHLIST_KEY);
+
+        // SVG markup for the heart and bookmark icons. The "active" class on the
+        // button fills the icon via CSS (fill: var(--accent)). Stroke style matches
+        // the existing sun/moon icons in the theme toggle (1.5 stroke, currentColor).
+        const HEART_SVG = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        `;
+
+        const BOOKMARK_SVG = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+          </svg>
+        `;
+
+        // Build the two-button cluster used on cards and (in a slightly different
+        // wrapper class) inside the modal.
+        const collectionActionsHTML = (
+          ep,
+          wrapperClass = "collection-actions",
+        ) => {
+          const isFav = favorites.has(ep.id);
+          const isWatch = watchlist.has(ep.id);
+          return `
+            <div class="${wrapperClass}">
+              <button
+                type="button"
+                class="collect-btn watch-btn ${isWatch ? "active" : ""}"
+                data-collect="watchlist"
+                data-id="${ep.id}"
+                aria-pressed="${isWatch}"
+                aria-label="${isWatch ? "Remove from watchlist" : "Add to watchlist"}"
+                title="${isWatch ? "Remove from watchlist" : "Add to watchlist"}"
+              >${BOOKMARK_SVG}</button>
+              <button
+                type="button"
+                class="collect-btn fav-btn ${isFav ? "active" : ""}"
+                data-collect="favorite"
+                data-id="${ep.id}"
+                aria-pressed="${isFav}"
+                aria-label="${isFav ? "Remove from favorites" : "Add to favorites"}"
+                title="${isFav ? "Remove from favorites" : "Add to favorites"}"
+              >${HEART_SVG}</button>
+            </div>
+          `;
+        };
+
+        // Toggle membership and update every button on the page that points at this id.
+        // Re-renders the grid only when we're filtering by that collection (otherwise
+        // a re-render would needlessly destroy in-flight image loads / animations).
+        const toggleCollection = (kind, id) => {
+          const set = kind === "favorite" ? favorites : watchlist;
+          const key = kind === "favorite" ? FAVORITES_KEY : WATCHLIST_KEY;
+          if (set.has(id)) set.delete(id);
+          else set.add(id);
+          saveCollection(key, set);
+
+          // Sync any other buttons on screen for this episode (card + modal).
+          const isActive = set.has(id);
+          const selector =
+            kind === "favorite"
+              ? `.fav-btn[data-id="${id}"]`
+              : `.watch-btn[data-id="${id}"]`;
+          document.querySelectorAll(selector).forEach((btn) => {
+            btn.classList.toggle("active", isActive);
+            btn.setAttribute("aria-pressed", String(isActive));
+            const label =
+              kind === "favorite"
+                ? isActive
+                  ? "Remove from favorites"
+                  : "Add to favorites"
+                : isActive
+                  ? "Remove from watchlist"
+                  : "Add to watchlist";
+            btn.setAttribute("aria-label", label);
+            btn.setAttribute("title", label);
+          });
+
+          // If the user is currently filtering by this collection, the grid contents
+          // need to reflect the change. Also refresh the stats numbers.
+          if (
+            (kind === "favorite" && currentSeason === "favorites") ||
+            (kind === "watchlist" && currentSeason === "watchlist")
+          ) {
+            renderGrid();
+          }
+          renderStats();
+        };
+
+        // Wire up the collect buttons inside any container after it's rendered.
+        // Stops propagation so clicking the button doesn't also open the modal
+        // when the buttons sit on top of a card.
+        const wireCollectButtons = (root) => {
+          root.querySelectorAll(".collect-btn[data-collect]").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              const id = parseInt(btn.getAttribute("data-id"), 10);
+              const kind = btn.getAttribute("data-collect");
+              if (Number.isFinite(id) && kind) toggleCollection(kind, id);
+            });
+          });
+        };
 
         const escapeHtml = (s) => {
           if (s == null) return "";
@@ -1625,8 +2027,19 @@
 
         const getFiltered = () => {
           const filtered = episodes.filter((ep) => {
-            if (currentSeason !== "all" && String(ep.season) !== currentSeason)
+            // The "season" tab also doubles as a collection filter
+            if (currentSeason === "favorites") {
+              if (!favorites.has(ep.id)) return false;
+            } else if (currentSeason === "watchlist") {
+              if (!watchlist.has(ep.id)) return false;
+            } else if (currentSeason === "must-watch") {
+              if (!ep.must_watch) return false;
+            } else if (
+              currentSeason !== "all" &&
+              String(ep.season) !== currentSeason
+            ) {
               return false;
+            }
             return matchesSearch(ep, currentQuery);
           });
           const sorted = filtered.slice();
@@ -1658,7 +2071,19 @@
 
           if (list.length === 0) {
             grid.innerHTML = "";
-            status.textContent = "Nothing matches. Try another frequency.";
+            // Tailored empty-state copy when the user is viewing one of their
+            // collections but hasn't added anything to it yet.
+            if (currentSeason === "favorites" && !currentQuery) {
+              status.textContent =
+                "No favorites yet. Tap the heart on any episode to start your collection.";
+            } else if (currentSeason === "watchlist" && !currentQuery) {
+              status.textContent =
+                "Your watchlist is empty. Tap the bookmark on any episode to save it for later.";
+            } else if (currentSeason === "must-watch" && !currentQuery) {
+              status.textContent = "No must-watch episodes found.";
+            } else {
+              status.textContent = "Nothing matches. Try another frequency.";
+            }
             status.className = "status";
             status.style.display = "block";
             return;
@@ -1667,7 +2092,14 @@
 
           const html = list
             .map((ep, i) => {
-              const imgBlock = renderImageOrPlaceholder(ep, "card-img-wrap");
+              const mustWatchBadge = ep.must_watch
+                ? `<div class="must-watch-badge"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Must Watch</div>`
+                : "";
+              const imgBlock = renderImageOrPlaceholder(
+                ep,
+                "card-img-wrap",
+                collectionActionsHTML(ep) + mustWatchBadge,
+              );
               return `
       <article class="card" data-id="${ep.id}" style="animation-delay: ${Math.min(i * 18, 600)}ms">
         ${imgBlock}
@@ -1682,6 +2114,7 @@
             .join("");
           grid.innerHTML = html;
           wireImageFallbacks(grid, (id) => episodes.find((e) => e.id === id));
+          wireCollectButtons(grid);
 
           grid.querySelectorAll(".card").forEach((card) => {
             card.addEventListener("click", () => {
@@ -1702,8 +2135,9 @@
 
           modalContent.innerHTML = `
       ${renderImageOrPlaceholder(ep, "modal-hero")}
+      ${collectionActionsHTML(ep, "modal-collection-actions")}
       <div class="modal-body">
-        <div class="modal-tag">Season ${ep.season} &middot; Episode ${ep.episode}</div>
+        <div class="modal-tag">Season ${ep.season} &middot; Episode ${ep.episode}${ep.must_watch ? `<span class="must-watch-inline"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Must Watch</span>` : ""}</div>
         <h2 class="modal-title">${escapeHtml(ep.title)}</h2>
         <div class="modal-subtitle">First broadcast ${escapeHtml(formatAirDate(ep.air_date))}</div>
 
@@ -1810,6 +2244,7 @@
           wireImageFallbacks(modalContent, (id) =>
             episodes.find((e) => e.id === id),
           );
+          wireCollectButtons(modalContent);
 
           currentModalId = ep.id;
           updateNavButtons();
@@ -2039,8 +2474,19 @@
           const s = readUrlState();
           suppressHashWrite = true;
 
-          currentSeason =
-            s.season && /^[1-5]$/.test(s.season) ? s.season : "all";
+          // Season can be "all", 1-5, or one of the collection filters
+          const validSeasons = [
+            "all",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "favorites",
+            "watchlist",
+            "must-watch",
+          ];
+          currentSeason = validSeasons.includes(s.season) ? s.season : "all";
           currentSort = ["air", "title", "season"].includes(s.sort)
             ? s.sort
             : "air";
@@ -2165,6 +2611,23 @@
         </ul>
       </div>
       <div class="stat-block">
+        <div class="stat-label">Your Collections</div>
+        <ul class="stat-list">
+          <li>
+            <span class="stat-name" data-collection="favorites">Favorites</span>
+            <span class="stat-count">${favorites.size}</span>
+          </li>
+          <li>
+            <span class="stat-name" data-collection="watchlist">Watchlist</span>
+            <span class="stat-count">${watchlist.size}</span>
+          </li>
+          <li>
+            <span class="stat-name" data-collection="must-watch">Must Watch</span>
+            <span class="stat-count">${episodes.filter((e) => e.must_watch).length}</span>
+          </li>
+        </ul>
+      </div>
+      <div class="stat-block">
         <div class="stat-label">Most Prolific Writers</div>
         ${mkList(topN(writerCounts, 5))}
       </div>
@@ -2212,6 +2675,26 @@
                   );
                 });
                 currentSeason = s;
+                renderGrid();
+                writeUrlState();
+                scrollPastMasthead();
+              });
+            });
+
+          // Clicking "Favorites" or "Watchlist" in the stats panel switches the
+          // grid to that collection, the same way clicking a season number does.
+          statsGrid
+            .querySelectorAll(".stat-name[data-collection]")
+            .forEach((el) => {
+              el.addEventListener("click", () => {
+                const collection = el.getAttribute("data-collection");
+                seasonBar.querySelectorAll(".season-btn").forEach((b) => {
+                  b.classList.toggle(
+                    "active",
+                    b.getAttribute("data-season") === collection,
+                  );
+                });
+                currentSeason = collection;
                 renderGrid();
                 writeUrlState();
                 scrollPastMasthead();
