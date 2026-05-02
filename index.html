@@ -16,7 +16,7 @@
       :root,
       [data-theme="dark"] {
         --ink: #e8e4db;
-        --ink-dim: #8a8479;
+        --ink-dim: #a7a299;
         --ink-faint: #5a5550;
         --paper: #060810;
         --paper-2: #0d0f18;
@@ -281,7 +281,6 @@
 
       .dek {
         font-family: "Playfair Display", serif;
-        font-style: italic;
         font-weight: 400;
         font-size: clamp(1rem, 1.4vw, 1.25rem);
         color: var(--ink-dim);
@@ -413,7 +412,6 @@
       .random-btn:hover {
         border-color: var(--accent);
         color: var(--accent);
-        letter-spacing: 0.28em;
       }
 
       /* ============ SORT DROPDOWN ============ */
@@ -463,9 +461,14 @@
       }
 
       /* ============ MODAL NAV ARROWS ============ */
+      /* Anchored at a fixed distance from the top of the modal so the buttons
+         sit consistently over the hero image regardless of episode content
+         length. The hero is aspect-ratio 21/9 on a max-960px modal, so its
+         height is roughly 411px at full width; centering at ~200px keeps the
+         buttons reliably in the image area. */
       .modal-nav {
-        position: absolute;
-        top: 50%;
+        position: fixed;
+        top: 50vh;
         transform: translateY(-50%);
         background: var(--paper);
         border: 1px solid var(--rule-bright);
@@ -475,7 +478,7 @@
         cursor: pointer;
         font-family: "Inter", sans-serif;
         font-size: 20px;
-        z-index: 3;
+        z-index: 210;
         transition: all 0.2s;
         display: flex;
         align-items: center;
@@ -494,11 +497,11 @@
       }
 
       .modal-nav.prev {
-        left: -22px;
+        left: calc(50% - 480px - 22px);
       }
 
       .modal-nav.next {
-        right: -22px;
+        right: calc(50% - 480px - 22px);
       }
 
       @media (max-width: 1024px) {
@@ -572,8 +575,25 @@
         overflow: hidden;
         max-height: 0;
         transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+        border-top: 1px solid var(--rule);
         border-bottom: 1px solid var(--rule);
         background: var(--paper-2);
+      }
+
+      /* Mobile: controls bar hides when scrolling down, reappears scrolling up */
+      @media (max-width: 768px) {
+        .controls {
+          transition:
+            transform 0.3s ease,
+            opacity 0.3s ease,
+            top 0s;
+        }
+
+        .controls.controls-hidden {
+          transform: translateY(-100%);
+          opacity: 0;
+          pointer-events: none;
+        }
       }
 
       .stats-drawer.open {
@@ -770,7 +790,7 @@
         margin-left: auto;
         font-family: "Inter", sans-serif;
         font-weight: 600;
-        font-size: 10px;
+        font-size: 12px;
         letter-spacing: 0.08em;
         color: var(--ink-faint);
         text-transform: uppercase;
@@ -1213,7 +1233,7 @@
       }
 
       .credit-value {
-        font-family: "Playfair Display", serif;
+        font-family: "Inter", serif;
         color: var(--ink);
         font-size: 1.05rem;
       }
@@ -1239,7 +1259,7 @@
       }
 
       .storyline {
-        font-family: "Playfair Display", serif;
+        font-family: "Inter", serif;
         font-size: 1.15rem;
         line-height: 1.6;
         color: var(--ink);
@@ -1285,8 +1305,7 @@
 
       .theme-tag {
         font-family: "Inter", sans-serif;
-        font-size: 0.82rem;
-        font-style: italic;
+        font-size: 0.88rem;
         color: var(--accent-warm);
         background: var(--paper-3);
         border: 1px solid var(--rule);
@@ -1359,8 +1378,7 @@
       }
 
       .narration {
-        font-family: "Playfair Display", serif;
-        font-style: italic;
+        font-family: "Inter", serif;
         font-size: 1.02rem;
         line-height: 1.7;
         color: var(--ink);
@@ -1680,6 +1698,12 @@
       </div>
     </header>
 
+    <div class="stats-drawer" id="tz-stats-drawer">
+      <div class="stats-drawer-inner">
+        <div class="stats-grid" id="tz-stats-grid"></div>
+      </div>
+    </div>
+
     <section class="controls">
       <div class="controls-inner">
         <div class="search-wrap">
@@ -1794,12 +1818,6 @@
       <span class="count" id="tz-count"></span>
     </nav>
 
-    <div class="stats-drawer" id="tz-stats-drawer">
-      <div class="stats-drawer-inner">
-        <div class="stats-grid" id="tz-stats-grid"></div>
-      </div>
-    </div>
-
     <main class="grid-wrap">
       <div id="tz-grid" class="grid"></div>
       <div id="tz-status" class="status">Tuning the signal...</div>
@@ -1890,6 +1908,37 @@
           const isOpen = statsPanel.classList.toggle("open");
           statsToggleBtn.setAttribute("aria-expanded", String(isOpen));
         });
+
+        // Mobile: hide controls bar on scroll down, reveal on scroll up
+        (function () {
+          const controlsEl = document.querySelector(".controls");
+          let lastY = window.scrollY;
+          let ticking = false;
+
+          window.addEventListener(
+            "scroll",
+            function () {
+              if (ticking) return;
+              ticking = true;
+              requestAnimationFrame(function () {
+                if (window.innerWidth <= 768) {
+                  const currentY = window.scrollY;
+                  const seasonsEl = document.getElementById("tz-seasons");
+                  const threshold = seasonsEl
+                    ? seasonsEl.getBoundingClientRect().top + window.scrollY
+                    : 200;
+                  const scrolledDown = currentY > lastY && currentY > threshold;
+                  controlsEl.classList.toggle("controls-hidden", scrolledDown);
+                  lastY = currentY;
+                } else {
+                  controlsEl.classList.remove("controls-hidden");
+                }
+                ticking = false;
+              });
+            },
+            { passive: true },
+          );
+        })();
 
         let episodes = [];
         let currentSeason = "all";
@@ -2428,6 +2477,38 @@
         const barNext = document.getElementById("tz-bar-next");
         barPrev.addEventListener("click", () => navigateModal(-1));
         barNext.addEventListener("click", () => navigateModal(1));
+
+        // Swipe left/right on the modal to navigate episodes
+        (function () {
+          const modalEl = document.getElementById("tz-modal");
+          let touchStartX = null;
+          let touchStartY = null;
+
+          modalEl.addEventListener(
+            "touchstart",
+            function (e) {
+              touchStartX = e.touches[0].clientX;
+              touchStartY = e.touches[0].clientY;
+            },
+            { passive: true },
+          );
+
+          modalEl.addEventListener(
+            "touchend",
+            function (e) {
+              if (touchStartX === null) return;
+              const dx = e.changedTouches[0].clientX - touchStartX;
+              const dy = e.changedTouches[0].clientY - touchStartY;
+              touchStartX = null;
+              touchStartY = null;
+              // Require a mostly horizontal swipe of at least 50px
+              if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx) * 0.8)
+                return;
+              navigateModal(dx < 0 ? 1 : -1);
+            },
+            { passive: true },
+          );
+        })();
 
         closeBtn.addEventListener("click", closeModal);
         modalBg.addEventListener("click", (e) => {
