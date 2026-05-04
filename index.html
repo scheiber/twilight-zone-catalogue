@@ -614,7 +614,7 @@
 
       .stats-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
         gap: 2px;
         background: var(--rule);
         border: 1px solid var(--rule);
@@ -1377,6 +1377,48 @@
         fill: var(--accent-warm);
       }
 
+      /* Viewed checkmark overlay on card image */
+      .viewed-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 2;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: rgba(10, 10, 11, 0.6);
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        font-family: "Inter", sans-serif;
+        font-weight: 600;
+        font-size: 9px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        padding: 4px 9px;
+        backdrop-filter: blur(2px);
+        pointer-events: none;
+      }
+
+      [data-theme="light"] .viewed-badge {
+        background: rgba(242, 237, 227, 0.78);
+      }
+
+      .viewed-badge svg {
+        width: 9px;
+        height: 9px;
+        flex-shrink: 0;
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 2.5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      /* Dim viewed cards slightly so unwatched ones pop */
+      .card.is-viewed .card-img-wrap img {
+        opacity: 0.72;
+      }
+
       .narration {
         font-family: "Inter", serif;
         font-size: 1.02rem;
@@ -1795,6 +1837,31 @@
       </button>
       <button
         class="season-btn season-btn-collection"
+        data-season="viewed"
+        title="Show episodes you've watched"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+          style="
+            width: 13px;
+            height: 13px;
+            vertical-align: -2px;
+            margin-right: 4px;
+          "
+        >
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+          <circle cx="12" cy="12" r="3" />
+        </svg>
+        Viewed
+      </button>
+      <button
+        class="season-btn season-btn-collection"
         data-season="must-watch"
         title="Show must-watch episodes"
       >
@@ -1953,6 +2020,7 @@
         // no-op, which is the same pattern the theme toggle uses.
         const FAVORITES_KEY = "tz-favorites";
         const WATCHLIST_KEY = "tz-watchlist";
+        const VIEWED_KEY = "tz-viewed";
 
         const loadCollection = (key) => {
           try {
@@ -1978,6 +2046,7 @@
 
         const favorites = loadCollection(FAVORITES_KEY);
         const watchlist = loadCollection(WATCHLIST_KEY);
+        const viewed = loadCollection(VIEWED_KEY);
 
         // SVG markup for the heart and bookmark icons. The "active" class on the
         // button fills the icon via CSS (fill: var(--accent)). Stroke style matches
@@ -1994,6 +2063,13 @@
           </svg>
         `;
 
+        const EYE_SVG = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        `;
+
         // Build the two-button cluster used on cards and (in a slightly different
         // wrapper class) inside the modal.
         const collectionActionsHTML = (
@@ -2002,8 +2078,18 @@
         ) => {
           const isFav = favorites.has(ep.id);
           const isWatch = watchlist.has(ep.id);
+          const isViewed = viewed.has(ep.id);
           return `
             <div class="${wrapperClass}">
+              <button
+                type="button"
+                class="collect-btn eye-btn ${isViewed ? "active" : ""}"
+                data-collect="viewed"
+                data-id="${ep.id}"
+                aria-pressed="${isViewed}"
+                aria-label="${isViewed ? "Mark as not viewed" : "Mark as viewed"}"
+                title="${isViewed ? "Mark as not viewed" : "Mark as viewed"}"
+              >${EYE_SVG}</button>
               <button
                 type="button"
                 class="collect-btn watch-btn ${isWatch ? "active" : ""}"
@@ -2030,8 +2116,18 @@
         // Re-renders the grid only when we're filtering by that collection (otherwise
         // a re-render would needlessly destroy in-flight image loads / animations).
         const toggleCollection = (kind, id) => {
-          const set = kind === "favorite" ? favorites : watchlist;
-          const key = kind === "favorite" ? FAVORITES_KEY : WATCHLIST_KEY;
+          const set =
+            kind === "favorite"
+              ? favorites
+              : kind === "watchlist"
+                ? watchlist
+                : viewed;
+          const key =
+            kind === "favorite"
+              ? FAVORITES_KEY
+              : kind === "watchlist"
+                ? WATCHLIST_KEY
+                : VIEWED_KEY;
           if (set.has(id)) set.delete(id);
           else set.add(id);
           saveCollection(key, set);
@@ -2041,7 +2137,9 @@
           const selector =
             kind === "favorite"
               ? `.fav-btn[data-id="${id}"]`
-              : `.watch-btn[data-id="${id}"]`;
+              : kind === "watchlist"
+                ? `.watch-btn[data-id="${id}"]`
+                : `.eye-btn[data-id="${id}"]`;
           document.querySelectorAll(selector).forEach((btn) => {
             btn.classList.toggle("active", isActive);
             btn.setAttribute("aria-pressed", String(isActive));
@@ -2050,18 +2148,43 @@
                 ? isActive
                   ? "Remove from favorites"
                   : "Add to favorites"
-                : isActive
-                  ? "Remove from watchlist"
-                  : "Add to watchlist";
+                : kind === "watchlist"
+                  ? isActive
+                    ? "Remove from watchlist"
+                    : "Add to watchlist"
+                  : isActive
+                    ? "Mark as not viewed"
+                    : "Mark as viewed";
             btn.setAttribute("aria-label", label);
             btn.setAttribute("title", label);
           });
+
+          // Update the viewed-badge and card dim state on the grid card
+          if (kind === "viewed") {
+            const card = document.querySelector(`.card[data-id="${id}"]`);
+            if (card) {
+              card.classList.toggle("is-viewed", isActive);
+              const existingBadge = card.querySelector(".viewed-badge");
+              if (isActive && !existingBadge) {
+                const imgWrap = card.querySelector(".card-img-wrap");
+                if (imgWrap) {
+                  imgWrap.insertAdjacentHTML(
+                    "beforeend",
+                    `<div class="viewed-badge"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Viewed</div>`,
+                  );
+                }
+              } else if (!isActive && existingBadge) {
+                existingBadge.remove();
+              }
+            }
+          }
 
           // If the user is currently filtering by this collection, the grid contents
           // need to reflect the change. Also refresh the stats numbers.
           if (
             (kind === "favorite" && currentSeason === "favorites") ||
-            (kind === "watchlist" && currentSeason === "watchlist")
+            (kind === "watchlist" && currentSeason === "watchlist") ||
+            (kind === "viewed" && currentSeason === "viewed")
           ) {
             renderGrid();
           }
@@ -2203,6 +2326,8 @@
               if (!favorites.has(ep.id)) return false;
             } else if (currentSeason === "watchlist") {
               if (!watchlist.has(ep.id)) return false;
+            } else if (currentSeason === "viewed") {
+              if (!viewed.has(ep.id)) return false;
             } else if (currentSeason === "must-watch") {
               if (!ep.must_watch) return false;
             } else if (
@@ -2250,6 +2375,9 @@
             } else if (currentSeason === "watchlist" && !currentQuery) {
               status.textContent =
                 "Your watchlist is empty. Tap the bookmark on any episode to save it for later.";
+            } else if (currentSeason === "viewed" && !currentQuery) {
+              status.textContent =
+                "Nothing marked as viewed yet. Tap the eye on any episode after you watch it.";
             } else if (currentSeason === "must-watch" && !currentQuery) {
               status.textContent = "No must-watch episodes found.";
             } else {
@@ -2266,13 +2394,16 @@
               const mustWatchBadge = ep.must_watch
                 ? `<div class="must-watch-badge"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Must Watch</div>`
                 : "";
+              const viewedBadge = viewed.has(ep.id)
+                ? `<div class="viewed-badge"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Viewed</div>`
+                : "";
               const imgBlock = renderImageOrPlaceholder(
                 ep,
                 "card-img-wrap",
-                collectionActionsHTML(ep) + mustWatchBadge,
+                collectionActionsHTML(ep) + mustWatchBadge + viewedBadge,
               );
               return `
-      <article class="card" data-id="${ep.id}" style="animation-delay: ${Math.min(i * 18, 600)}ms">
+      <article class="card${viewed.has(ep.id) ? " is-viewed" : ""}" data-id="${ep.id}" style="animation-delay: ${Math.min(i * 18, 600)}ms">
         ${imgBlock}
         <div class="card-body">
           <div class="card-meta">S${ep.season} &middot; E${ep.episode} &middot; ${escapeHtml(formatAirDate(ep.air_date))}</div>
@@ -2687,6 +2818,7 @@
             "5",
             "favorites",
             "watchlist",
+            "viewed",
             "must-watch",
           ];
           currentSeason = validSeasons.includes(s.season) ? s.season : "all";
@@ -2792,11 +2924,41 @@
       </ul>
     `;
 
+          const viewedSeasonCounts = [1, 2, 3, 4, 5].map((s) => ({
+            season: s,
+            total: episodes.filter((e) => String(e.season) === String(s))
+              .length,
+            count: episodes.filter(
+              (e) => String(e.season) === String(s) && viewed.has(e.id),
+            ).length,
+          }));
+          const totalViewed = viewed.size;
+          const totalEps = episodes.length;
+          const pct =
+            totalEps > 0 ? Math.round((totalViewed / totalEps) * 100) : 0;
+
           statsGrid.innerHTML = `
       <div class="stat-block">
         <div class="stat-label">The Series</div>
         <div class="stat-big">${episodes.length}</div>
         <div class="stat-caption">episodes across five seasons from 1959 to 1964. Hosted and largely written by Rod Serling for CBS.</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Your Progress</div>
+        <div class="stat-big">${totalViewed}<span style="font-size:1.2rem; font-weight:400; color: var(--ink-dim)"> / ${totalEps}</span></div>
+        <div class="stat-caption" style="margin-bottom: 14px;">${pct}% of the series viewed</div>
+        <ul class="stat-list">
+          ${viewedSeasonCounts
+            .map(
+              (s) => `
+            <li>
+              <span class="stat-name" data-season="${s.season}">Season ${s.season}</span>
+              <span class="stat-count">${s.count} / ${s.total}</span>
+            </li>
+          `,
+            )
+            .join("")}
+        </ul>
       </div>
       <div class="stat-block">
         <div class="stat-label">By Season</div>
