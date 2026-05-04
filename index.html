@@ -75,7 +75,7 @@
       }
 
       a {
-        color: rgb(179, 179, 179);
+        color: var(--ink-dim);
         font-weight: bold;
         text-decoration: none;
       }
@@ -614,7 +614,7 @@
 
       .stats-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
         gap: 2px;
         background: var(--rule);
         border: 1px solid var(--rule);
@@ -665,7 +665,7 @@
       }
 
       .stat-name {
-        font-family: "Inter", serif;
+        font-family: "Inter", sans-serif;
         font-size: 0.98rem;
         color: var(--ink);
         cursor: pointer;
@@ -1204,7 +1204,7 @@
       }
 
       .modal-subtitle {
-        font-family: "Inter", serif;
+        font-family: "Inter", sans-serif;
         font-weight: 600;
         font-size: 12px;
         text-transform: uppercase;
@@ -1233,7 +1233,7 @@
       }
 
       .credit-value {
-        font-family: "Inter", serif;
+        font-family: "Inter", sans-serif;
         color: var(--ink);
         font-size: 1.05rem;
       }
@@ -1259,7 +1259,7 @@
       }
 
       .storyline {
-        font-family: "Inter", serif;
+        font-family: "Inter", sans-serif;
         font-size: 1.15rem;
         line-height: 1.6;
         color: var(--ink);
@@ -1420,7 +1420,7 @@
       }
 
       .narration {
-        font-family: "Inter", serif;
+        font-family: "Inter", sans-serif;
         font-size: 1.02rem;
         line-height: 1.7;
         color: var(--ink);
@@ -2427,6 +2427,9 @@
           });
         };
 
+        // Declared here so openModal (below) and closeModal can reference it safely.
+        const topBtn = document.getElementById("tz-top-btn");
+
         const openModal = (ep) => {
           const cast = (ep.cast || [])
             .map(
@@ -2755,7 +2758,6 @@
         });
 
         // ============ BACK TO TOP ============
-        const topBtn = document.getElementById("tz-top-btn");
         const heroEl = document.querySelector(".hero");
 
         const updateTopBtn = () => {
@@ -2850,18 +2852,9 @@
           suppressHashWrite = false;
         };
 
-        // If the user navigates back/forward, re-apply state
+        // If the user navigates back/forward, re-apply full state
         window.addEventListener("hashchange", () => {
-          const s = readUrlState();
-          // If the episode ID changed, open/close the modal accordingly
-          const targetId = s.ep ? parseInt(s.ep, 10) : null;
-          if (targetId !== currentModalId) {
-            if (targetId == null) closeModal();
-            else {
-              const ep = episodes.find((e) => e.id === targetId);
-              if (ep) openModal(ep);
-            }
-          }
+          applyUrlState();
         });
 
         // ============ STATS PANEL ============
@@ -2909,7 +2902,7 @@
               .length,
           }));
 
-          const mkList = (items, onClickType) => `
+          const mkList = (items) => `
       <ul class="stat-list">
         ${items
           .map(
@@ -3010,6 +3003,13 @@
                 const q = el.getAttribute("data-search");
                 searchEl.value = q;
                 currentQuery = q;
+                currentSeason = "all";
+                seasonBar.querySelectorAll(".season-btn").forEach((b) => {
+                  b.classList.toggle(
+                    "active",
+                    b.getAttribute("data-season") === "all",
+                  );
+                });
                 updateClearVisibility();
                 renderGrid();
                 writeUrlState();
