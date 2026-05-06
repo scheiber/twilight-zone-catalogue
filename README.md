@@ -12,6 +12,12 @@ The Twilight Zone Catalogue is a single-file vanilla HTML/CSS/JS web app. It fet
 
 ---
 
+## AI Disclaimer
+
+This project was created and developed by a human, but an AI assistant ([Claude Code](https://claude.ai)) was used for brainstorming, code generation, design, and debugging purposes. The final implementation and design decisions were made solely by the author, and all generated code, content, and logic were reviewed, tested, and validated by the author prior to inclusion. Any errors, bugs, or issues in the final product are the responsibility of the author. The AI was a tool to assist in the creative and development process, but the vision, implementation, and final product are entirely the work of the author.
+
+---
+
 ## Features
 
 ### Browsing and Search
@@ -74,13 +80,13 @@ The current view (season filter, sort order, search query, and open episode) is 
 
 ## Architecture
 
-| Concern | Approach |
-|---|---|
-| Data source | Railway-hosted REST API (`/episodes`) |
-| Rendering | Vanilla JS DOM manipulation, no framework |
-| State | In-memory JS variables, synced to URL hash and `localStorage` |
-| Styling | Pure CSS custom properties, two themes, no preprocessor |
-| Fonts | Playfair Display (headings) and Inter (body) via Google Fonts |
+| Concern     | Approach                                                      |
+| ----------- | ------------------------------------------------------------- |
+| Data source | Railway-hosted REST API (`/episodes`)                         |
+| Rendering   | Vanilla JS DOM manipulation, no framework                     |
+| State       | In-memory JS variables, synced to URL hash and `localStorage` |
+| Styling     | Pure CSS custom properties, two themes, no preprocessor       |
+| Fonts       | Playfair Display (headings) and Inter (body) via Google Fonts |
 
 ---
 
