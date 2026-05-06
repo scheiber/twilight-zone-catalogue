@@ -12,12 +12,6 @@ The Twilight Zone Catalogue is a single-file vanilla HTML/CSS/JS web app. It fet
 
 ---
 
-## AI Disclaimer
-
-This project was created and developed by a human, but an AI assistant ([Claude Code](https://claude.ai)) was used for brainstorming, code generation, design, and debugging purposes. The final implementation and design decisions were made solely by the author, and all generated code, content, and logic were reviewed, tested, and validated by the author prior to inclusion. Any errors, bugs, or issues in the final product are the responsibility of the author. The AI was a tool to assist in the creative and development process, but the vision, implementation, and final product are entirely the work of the author.
-
----
-
 ## Features
 
 ### Browsing and Search
@@ -106,3 +100,15 @@ To point at a local API instance, swap the `API` constant near the top of the sc
 // const API = "https://twilight-zone-api-production.up.railway.app/episodes";
 const API = "http://localhost:3000/episodes";
 ```
+
+---
+
+## AI Disclaimer
+
+This project was created and developed by a human, but an AI assistant ([Claude Code](https://claude.ai)) was used for brainstorming, code generation, design, and debugging purposes. The final implementation and design decisions were made solely by the author, and all generated code, content, and logic were reviewed, tested, and validated by the author prior to inclusion. Any errors, bugs, or issues in the final product are the responsibility of the author. The AI was a tool to assist in the creative and development process, but the vision, implementation, and final product are entirely the work of the author.
+
+---
+
+## Copyright Disclaimer
+
+This project is a fan-made tribute to the original "The Twilight Zone" TV series. All episode data, images, and related content are sourced from publicly available information about the show. This project is intended for educational and non-commercial use only, and is not affiliated with or endorsed by the original creators, rights holders, or any official entities associated with "The Twilight Zone" or CBS. All intellectual property rights for the original series remain with their respective owners.
