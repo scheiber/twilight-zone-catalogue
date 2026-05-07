@@ -1588,6 +1588,163 @@
         border-color: var(--accent);
       }
 
+      /* ============ EASTER EGG: FIFTH DIMENSION OVERLAY ============ */
+      #tz-dimension-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: #000;
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        cursor: pointer;
+        overflow: hidden;
+      }
+
+      #tz-dimension-overlay.active {
+        display: flex;
+        animation: dimFadeIn 1.2s ease forwards;
+      }
+
+      @keyframes dimFadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      #tz-dimension-overlay .dim-spiral {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(107, 230, 209, 0.08) 0%,
+          rgba(107, 230, 209, 0.03) 30%,
+          transparent 70%
+        );
+        animation: dimPulse 4s ease-in-out infinite;
+      }
+
+      @keyframes dimPulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 0.6;
+        }
+        50% {
+          transform: scale(1.08);
+          opacity: 1;
+        }
+      }
+
+      #tz-dimension-overlay .dim-rings {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      }
+
+      #tz-dimension-overlay .dim-ring {
+        position: absolute;
+        border-radius: 50%;
+        border: 1px solid rgba(107, 230, 209, 0.15);
+        animation: dimExpand 6s linear infinite;
+      }
+
+      #tz-dimension-overlay .dim-ring:nth-child(2) {
+        animation-delay: -2s;
+      }
+      #tz-dimension-overlay .dim-ring:nth-child(3) {
+        animation-delay: -4s;
+      }
+
+      @keyframes dimExpand {
+        from {
+          width: 0;
+          height: 0;
+          opacity: 0.8;
+        }
+        to {
+          width: 120vmax;
+          height: 120vmax;
+          opacity: 0;
+        }
+      }
+
+      #tz-dimension-overlay .dim-text {
+        position: relative;
+        z-index: 1;
+        max-width: 640px;
+        padding: 48px 40px;
+        text-align: center;
+      }
+
+      #tz-dimension-overlay .dim-eyebrow {
+        font-family: "Inter", sans-serif;
+        font-weight: 600;
+        font-size: 11px;
+        letter-spacing: 0.22em;
+        color: rgba(107, 230, 209, 0.7);
+        text-transform: uppercase;
+        margin-bottom: 32px;
+        opacity: 0;
+        animation: dimSlideUp 0.8s ease 1s forwards;
+      }
+
+      #tz-dimension-overlay .dim-quote {
+        font-family: "Playfair Display", serif;
+        font-weight: 400;
+        font-style: italic;
+        font-size: clamp(1.3rem, 2.8vw, 1.9rem);
+        line-height: 1.6;
+        color: #e8e4db;
+        margin-bottom: 40px;
+        opacity: 0;
+        animation: dimSlideUp 0.8s ease 1.4s forwards;
+      }
+
+      #tz-dimension-overlay .dim-credit {
+        font-family: "Inter", sans-serif;
+        font-weight: 600;
+        font-size: 11px;
+        letter-spacing: 0.18em;
+        color: rgba(107, 230, 209, 0.5);
+        text-transform: uppercase;
+        opacity: 0;
+        animation: dimSlideUp 0.8s ease 1.9s forwards;
+      }
+
+      #tz-dimension-overlay .dim-dismiss {
+        position: absolute;
+        bottom: 40px;
+        font-family: "Inter", sans-serif;
+        font-weight: 600;
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        color: rgba(255, 255, 255, 0.25);
+        text-transform: uppercase;
+        opacity: 0;
+        animation: dimSlideUp 0.8s ease 2.6s forwards;
+      }
+
+      @keyframes dimSlideUp {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* ============ END EASTER EGG ============ */
+
       /* Responsive */
       @media (max-width: 820px) {
         .hero {
@@ -3151,6 +3308,84 @@
         style.id = "starfield-dynamic";
         style.textContent = css;
         document.head.appendChild(style);
+      })();
+    </script>
+    <!-- Easter egg: Fifth Dimension overlay (click masthead 5x rapidly) -->
+    <div
+      id="tz-dimension-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="You have entered the fifth dimension"
+    >
+      <div class="dim-spiral"></div>
+      <div class="dim-rings">
+        <div class="dim-ring"></div>
+        <div class="dim-ring"></div>
+        <div class="dim-ring"></div>
+      </div>
+      <div class="dim-text">
+        <div class="dim-eyebrow">You are about to enter another dimension</div>
+        <div class="dim-quote">
+          &ldquo;There is a fifth dimension beyond that which is known to man.
+          It is a dimension as vast as space and as timeless as infinity. It is
+          the middle ground between light and shadow, between science and
+          superstition, and it lies between the pit of man&rsquo;s fears and the
+          summit of his knowledge.&rdquo;
+        </div>
+        <div class="dim-credit">Rod Serling &middot; 1959</div>
+      </div>
+      <div class="dim-dismiss">Click anywhere to return to your dimension</div>
+    </div>
+
+    <script>
+      /* ── Easter egg: click the masthead 5 times rapidly ────────────────
+         Each click within 1.2 s of the previous one counts. On the fifth,
+         the Fifth Dimension overlay appears. Clicking it dismisses it.   */
+      (function () {
+        var masthead = document.getElementById("tz-masthead");
+        var overlay = document.getElementById("tz-dimension-overlay");
+        var clicks = 0;
+        var lastTime = 0;
+        var WINDOW = 1200; // ms
+
+        masthead.addEventListener(
+          "click",
+          function (e) {
+            // The masthead already has a "reset filters" handler from the main
+            // script. We intercept here first and only prevent that reset on the
+            // fifth click (when we want the overlay, not a scroll-to-top).
+            var now = Date.now();
+            if (now - lastTime > WINDOW) clicks = 0;
+            lastTime = now;
+            clicks++;
+            if (clicks === 5) {
+              clicks = 0;
+              e.stopImmediatePropagation(); // keep the main handler from firing
+              showDimension();
+            }
+          },
+          true,
+        ); // capture phase so we can stopImmediatePropagation
+
+        function showDimension() {
+          // Re-trigger animations by briefly removing and re-adding the class.
+          overlay.classList.remove("active");
+          void overlay.offsetWidth; // force reflow
+          overlay.classList.add("active");
+          document.body.style.overflow = "hidden";
+        }
+
+        overlay.addEventListener("click", function () {
+          overlay.classList.remove("active");
+          document.body.style.overflow = "";
+        });
+
+        overlay.addEventListener("keydown", function (e) {
+          if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
+            overlay.classList.remove("active");
+            document.body.style.overflow = "";
+          }
+        });
       })();
     </script>
   </body>
