@@ -3340,7 +3340,8 @@
     <script>
       /* ── Easter egg: click the masthead 5 times rapidly ────────────────
          Each click within 1.2 s of the previous one counts. On the fifth,
-         the Fifth Dimension overlay appears. Clicking it dismisses it.   */
+         the Fifth Dimension overlay appears with the theme music.
+         Clicking the overlay dismisses it and stops the music.           */
       (function () {
         var masthead = document.getElementById("tz-masthead");
         var overlay = document.getElementById("tz-dimension-overlay");
@@ -3348,42 +3349,72 @@
         var lastTime = 0;
         var WINDOW = 1200; // ms
 
+        var audio = new Audio("theme.mp3");
+        audio.loop = true;
+
+        function startTheme() {
+          audio.currentTime = 0;
+          audio.volume = 0;
+          audio.play().catch(function () {
+            /* autoplay blocked; silent fail */
+          });
+          // Fade in over ~1.2 s
+          var step = 0;
+          var iv = setInterval(function () {
+            step++;
+            audio.volume = Math.min(1, step / 24);
+            if (audio.volume >= 1) clearInterval(iv);
+          }, 50);
+        }
+
+        function stopTheme() {
+          // Fade out over ~1 s then pause
+          var iv = setInterval(function () {
+            audio.volume = Math.max(0, audio.volume - 0.05);
+            if (audio.volume <= 0) {
+              clearInterval(iv);
+              audio.pause();
+            }
+          }, 50);
+        }
+
+        // ── Masthead click counter ──────────────────────────────────────
+
         masthead.addEventListener(
           "click",
           function (e) {
-            // The masthead already has a "reset filters" handler from the main
-            // script. We intercept here first and only prevent that reset on the
-            // fifth click (when we want the overlay, not a scroll-to-top).
             var now = Date.now();
             if (now - lastTime > WINDOW) clicks = 0;
             lastTime = now;
             clicks++;
             if (clicks === 5) {
               clicks = 0;
-              e.stopImmediatePropagation(); // keep the main handler from firing
+              e.stopImmediatePropagation();
               showDimension();
             }
           },
           true,
-        ); // capture phase so we can stopImmediatePropagation
+        );
 
         function showDimension() {
-          // Re-trigger animations by briefly removing and re-adding the class.
           overlay.classList.remove("active");
-          void overlay.offsetWidth; // force reflow
+          void overlay.offsetWidth;
           overlay.classList.add("active");
           document.body.style.overflow = "hidden";
+          startTheme();
         }
 
-        overlay.addEventListener("click", function () {
+        function hideDimension() {
           overlay.classList.remove("active");
           document.body.style.overflow = "";
-        });
+          stopTheme();
+        }
+
+        overlay.addEventListener("click", hideDimension);
 
         overlay.addEventListener("keydown", function (e) {
           if (e.key === "Escape" || e.key === "Enter" || e.key === " ") {
-            overlay.classList.remove("active");
-            document.body.style.overflow = "";
+            hideDimension();
           }
         });
       })();
