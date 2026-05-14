@@ -327,6 +327,53 @@
         font-size: 13px;
       }
 
+      /* ============ CLOUD SYNC INDICATOR ============ */
+      /* Small dot in the hero colophon area that reflects sync state.
+         Only visible when DYNAMO_SYNC_URL is configured (data-sync attr set). */
+      .sync-indicator {
+        display: none;
+        align-items: center;
+        gap: 6px;
+        font-family: "Inter", sans-serif;
+        font-size: 9px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--ink-faint);
+        margin-top: 6px;
+      }
+
+      .sync-indicator[data-sync] {
+        display: flex;
+      }
+
+      .sync-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--ink-faint);
+        flex-shrink: 0;
+        transition: background 0.4s ease;
+      }
+
+      .sync-indicator[data-sync="syncing"] .sync-dot {
+        background: var(--accent-warm);
+        animation: sync-pulse 1.1s ease-in-out infinite;
+      }
+
+      .sync-indicator[data-sync="ok"] .sync-dot {
+        background: var(--accent);
+      }
+
+      .sync-indicator[data-sync="offline"] .sync-dot {
+        background: var(--red);
+      }
+
+      @keyframes sync-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+      }
+
       /* ============ CONTROLS ============ */
       .controls {
         padding: 28px 48px;
@@ -1925,6 +1972,10 @@
             <span class="theme-label-light">Lights On</span>
             <span class="theme-label-dark">Lights Off</span>
           </button>
+          <div id="tz-sync-indicator" class="sync-indicator" aria-live="polite">
+            <span class="sync-dot"></span>
+            <span class="sync-label">Cloud Sync</span>
+          </div>
         </div>
       </div>
     </header>
@@ -2202,40 +2253,285 @@
         let currentSort = "air";
         let currentModalId = null;
 
-        // ============ COLLECTIONS (favorites + watchlist) ============
-        // Both lists are stored as arrays of episode IDs in localStorage. We use
-        // Sets in memory for quick membership checks. If localStorage is blocked
-        // (private mode, quota issues), the sets stay empty and writes silently
-        // no-op, which is the same pattern the theme toggle uses.
-        const FAVORITES_KEY = "tz-favorites";
-        const WATCHLIST_KEY = "tz-watchlist";
-        const VIEWED_KEY = "tz-viewed";
+        // ============ COLLECTIONS (favorites / watchlist / viewed) ============
+        //
+        // Storage architecture:
+        //
+        //   Primary:  IndexedDB ("tz-catalogue", object store "collections")
+        //             Each record: { id: "<kind>:<episodeId>", kind, episodeId, ts }
+        //             Persistent across sessions, survives page reloads, no quota
+        //             issues for this data size, works offline.
+        //
+        //   Optional: DynamoDB via API Gateway / Lambda (cloud sync)
+        //             Enabled by setting DYNAMO_SYNC_URL to your endpoint below.
+        //             When set, every toggle also POSTs { userId, kind, episodeId,
+        //             action: "add"|"remove", ts } to that URL. On startup the app
+        //             fetches the user's remote state and merges it (remote wins for
+        //             any id not already in the local DB, local wins for conflicts
+        //             by comparing ts). This gives last-write-wins semantics across
+        //             multiple devices without a dedicated auth layer -- just set
+        //             DYNAMO_USER_ID to something stable per user (e.g. a UUID you
+        //             store in localStorage, or a real auth token).
+        //
+        //   Fallback: If IndexedDB is unavailable (rare: some private-browsing
+        //             implementations block it), we fall back to the original
+        //             localStorage approach transparently.
 
-        const loadCollection = (key) => {
+        // ---------- CONFIGURATION ----------
+        // Set DYNAMO_SYNC_URL to your API Gateway endpoint to enable cloud sync.
+        // Leave as null (or an empty string) to run purely offline/local.
+        //
+        // Example:
+        //   const DYNAMO_SYNC_URL = "https://abc123.execute-api.us-east-1.amazonaws.com/prod/collections";
+        const DYNAMO_SYNC_URL = null;
+
+        // A stable per-user identifier. If you have real auth, use the user's sub/id.
+        // If not, we auto-generate a UUID on first visit and persist it to localStorage.
+        const DYNAMO_USER_ID = (() => {
+          const KEY = "tz-user-id";
           try {
-            const raw = localStorage.getItem(key);
+            let id = localStorage.getItem(KEY);
+            if (!id) {
+              id = crypto.randomUUID
+                ? crypto.randomUUID()
+                : "u-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+              localStorage.setItem(KEY, id);
+            }
+            return id;
+          } catch {
+            return "anonymous";
+          }
+        })();
+        // -----------------------------------
+
+        // --- IndexedDB setup ---
+        const IDB_NAME = "tz-catalogue";
+        const IDB_VERSION = 1;
+        const IDB_STORE = "collections";
+
+        let _idb = null; // resolved IDBDatabase, or null if unavailable
+
+        const openIDB = () =>
+          new Promise((resolve) => {
+            if (!window.indexedDB) { resolve(null); return; }
+            const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+            req.onupgradeneeded = (e) => {
+              const db = e.target.result;
+              if (!db.objectStoreNames.contains(IDB_STORE)) {
+                const store = db.createObjectStore(IDB_STORE, { keyPath: "id" });
+                store.createIndex("by_kind", "kind", { unique: false });
+              }
+            };
+            req.onsuccess = (e) => resolve(e.target.result);
+            req.onerror = () => resolve(null);
+          });
+
+        // Wrap IDB transaction in a promise.
+        const idbRun = (mode, fn) =>
+          new Promise((resolve, reject) => {
+            if (!_idb) { resolve(null); return; }
+            const tx = _idb.transaction(IDB_STORE, mode);
+            const store = tx.objectStore(IDB_STORE);
+            const req = fn(store);
+            if (req) {
+              req.onsuccess = (e) => resolve(e.target.result);
+              req.onerror = () => reject(req.error);
+            } else {
+              tx.oncomplete = () => resolve(null);
+              tx.onerror = () => reject(tx.error);
+            }
+          });
+
+        // Load all records for a given kind into a Set of episode ids.
+        const idbLoadKind = async (kind) => {
+          if (!_idb) return null; // signal to fall back to localStorage
+          return new Promise((resolve) => {
+            const tx = _idb.transaction(IDB_STORE, "readonly");
+            const store = tx.objectStore(IDB_STORE);
+            const index = store.index("by_kind");
+            const req = index.getAll(kind);
+            req.onsuccess = () => {
+              const set = new Set(req.result.map((r) => r.episodeId));
+              resolve(set);
+            };
+            req.onerror = () => resolve(new Set());
+          });
+        };
+
+        // Write (upsert) or delete a record.
+        const idbWrite = async (kind, episodeId, action /* "add"|"remove" */) => {
+          const key = `${kind}:${episodeId}`;
+          if (action === "remove") {
+            await idbRun("readwrite", (s) => s.delete(key)).catch(() => {});
+          } else {
+            await idbRun("readwrite", (s) =>
+              s.put({ id: key, kind, episodeId, ts: Date.now() })
+            ).catch(() => {});
+          }
+        };
+
+        // --- localStorage fallback (mirrors the old API surface) ---
+        const LS_KEYS = {
+          favorite: "tz-favorites",
+          watchlist: "tz-watchlist",
+          viewed: "tz-viewed",
+        };
+
+        const lsLoad = (kind) => {
+          try {
+            const raw = localStorage.getItem(LS_KEYS[kind]);
             if (!raw) return new Set();
             const arr = JSON.parse(raw);
             if (!Array.isArray(arr)) return new Set();
-            return new Set(
-              arr.map((n) => parseInt(n, 10)).filter(Number.isFinite),
-            );
+            return new Set(arr.map((n) => parseInt(n, 10)).filter(Number.isFinite));
           } catch {
             return new Set();
           }
         };
 
-        const saveCollection = (key, set) => {
+        const lsSave = (kind, set) => {
           try {
-            localStorage.setItem(key, JSON.stringify([...set]));
+            localStorage.setItem(LS_KEYS[kind], JSON.stringify([...set]));
+          } catch { /* quota / private mode -- silently ignore */ }
+        };
+
+        // --- DynamoDB sync helpers ---
+        const dynamoFetch = async () => {
+          if (!DYNAMO_SYNC_URL) return null;
+          try {
+            const res = await fetch(
+              `${DYNAMO_SYNC_URL}?userId=${encodeURIComponent(DYNAMO_USER_ID)}`,
+              { headers: { Accept: "application/json" } }
+            );
+            if (!res.ok) return null;
+            // Expected shape: { items: [{ kind, episodeId, ts, action }] }
+            return await res.json();
           } catch {
-            /* ignore quota / private mode errors */
+            return null;
           }
         };
 
-        const favorites = loadCollection(FAVORITES_KEY);
-        const watchlist = loadCollection(WATCHLIST_KEY);
-        const viewed = loadCollection(VIEWED_KEY);
+        const dynamoPost = async (kind, episodeId, action) => {
+          if (!DYNAMO_SYNC_URL) return;
+          try {
+            await fetch(DYNAMO_SYNC_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: DYNAMO_USER_ID,
+                kind,
+                episodeId,
+                action,
+                ts: Date.now(),
+              }),
+              // "fire and forget" -- we don't block the UI on this
+              keepalive: true,
+            });
+          } catch { /* network errors are non-fatal */ }
+        };
+
+        // Merge remote state into local IDB/Sets.
+        // Remote items win only when the episodeId is not present locally OR
+        // the remote ts is strictly newer than the local record.
+        const mergeRemote = async (remoteItems, sets) => {
+          if (!Array.isArray(remoteItems)) return;
+          for (const item of remoteItems) {
+            const { kind, episodeId, action, ts: remoteTss } = item;
+            if (!sets[kind]) continue;
+            const id = parseInt(episodeId, 10);
+            if (!Number.isFinite(id)) continue;
+
+            // Check what we have locally (for ts comparison when IDB is available).
+            let localTs = 0;
+            if (_idb) {
+              const key = `${kind}:${id}`;
+              const rec = await idbRun("readonly", (s) => s.get(key)).catch(() => null);
+              localTs = rec ? rec.ts : 0;
+            }
+
+            const remoteTs = typeof remoteTss === "number" ? remoteTss : 0;
+            if (remoteTs >= localTs) {
+              // Remote is newer: apply it.
+              if (action === "add") {
+                sets[kind].add(id);
+                if (_idb) await idbWrite(kind, id, "add");
+                else lsSave(kind, sets[kind]);
+              } else {
+                sets[kind].delete(id);
+                if (_idb) await idbWrite(kind, id, "remove");
+                else lsSave(kind, sets[kind]);
+              }
+            }
+          }
+        };
+
+        // --- Initialise everything (async boot, non-blocking) ---
+        // Collections are loaded here. We expose them as plain JS Sets that the
+        // rest of the app reads exactly as before; all persistence is handled
+        // transparently below the surface.
+
+        const favorites = new Set();
+        const watchlist = new Set();
+        const viewed = new Set();
+        const _sets = { favorite: favorites, watchlist, viewed };
+
+        // Show a subtle sync indicator badge in the colophon area.
+        const _syncIndicator = document.getElementById("tz-sync-indicator");
+        const setSyncStatus = (state /* "syncing"|"ok"|"offline"|null */) => {
+          if (!_syncIndicator) return;
+          const label = _syncIndicator.querySelector(".sync-label");
+          if (state === "syncing" && label) label.textContent = "Syncing…";
+          else if (state === "ok" && label) label.textContent = "Cloud Sync";
+          else if (state === "offline" && label) label.textContent = "Sync Offline";
+          if (state) _syncIndicator.setAttribute("data-sync", state);
+          else _syncIndicator.removeAttribute("data-sync");
+        };
+
+        // Boot sequence -- runs concurrently with the API fetch for episodes.
+        (async () => {
+          _idb = await openIDB();
+
+          const KINDS = ["favorite", "watchlist", "viewed"];
+
+          if (_idb) {
+            // Load all three collections from IDB in parallel.
+            const [favs, wls, vws] = await Promise.all(KINDS.map(idbLoadKind));
+            favs.forEach((id) => favorites.add(id));
+            wls.forEach((id) => watchlist.add(id));
+            vws.forEach((id) => viewed.add(id));
+          } else {
+            // IDB unavailable: fall back to localStorage.
+            lsLoad("favorite").forEach((id) => favorites.add(id));
+            lsLoad("watchlist").forEach((id) => watchlist.add(id));
+            lsLoad("viewed").forEach((id) => viewed.add(id));
+          }
+
+          // Cloud sync (optional): fetch remote state and merge.
+          if (DYNAMO_SYNC_URL) {
+            setSyncStatus("syncing");
+            const remote = await dynamoFetch();
+            if (remote && remote.items) {
+              await mergeRemote(remote.items, _sets);
+              setSyncStatus("ok");
+              // After merge, re-render anything that may have changed.
+              renderGrid();
+              renderStats();
+            } else {
+              setSyncStatus("offline");
+            }
+          }
+        })();
+
+        // Public toggle -- called by wireCollectButtons just like before.
+        // Now also persists to IDB and (optionally) syncs to DynamoDB.
+        const _origSaveCollection = async (kind, id, action) => {
+          if (_idb) {
+            await idbWrite(kind, id, action);
+          } else {
+            lsSave(kind, _sets[kind]);
+          }
+          dynamoPost(kind, id, action); // non-blocking
+        };
 
         // SVG markup for the heart and bookmark icons. The "active" class on the
         // button fills the icon via CSS (fill: var(--accent)). Stroke style matches
@@ -2305,21 +2601,12 @@
         // Re-renders the grid only when we're filtering by that collection (otherwise
         // a re-render would needlessly destroy in-flight image loads / animations).
         const toggleCollection = (kind, id) => {
-          const set =
-            kind === "favorite"
-              ? favorites
-              : kind === "watchlist"
-                ? watchlist
-                : viewed;
-          const key =
-            kind === "favorite"
-              ? FAVORITES_KEY
-              : kind === "watchlist"
-                ? WATCHLIST_KEY
-                : VIEWED_KEY;
-          if (set.has(id)) set.delete(id);
+          const set = _sets[kind];
+          const action = set.has(id) ? "remove" : "add";
+          if (action === "remove") set.delete(id);
           else set.add(id);
-          saveCollection(key, set);
+          // Persist asynchronously -- does not block the synchronous UI updates below.
+          _origSaveCollection(kind, id, action);
 
           // Sync any other buttons on screen for this episode (card + modal).
           const isActive = set.has(id);
