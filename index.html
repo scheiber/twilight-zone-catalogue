@@ -109,7 +109,6 @@
         z-index: 1000;
         opacity: var(--grain-opacity);
         background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-        mix-blend-mode: overlay;
       }
 
       /* Scanline flicker, very subtle */
@@ -130,37 +129,6 @@
 
       /* ============ STARFIELD (dark theme only) ============ */
       /* Positions are injected by the starfield JS below on each page load */
-      @keyframes twinkle-a {
-        0%,
-        100% {
-          opacity: 0.45;
-        }
-        50% {
-          opacity: 1;
-        }
-      }
-      @keyframes twinkle-b {
-        0%,
-        100% {
-          opacity: 0.9;
-        }
-        50% {
-          opacity: 0.3;
-        }
-      }
-      @keyframes twinkle-c {
-        0%,
-        100% {
-          opacity: 0.6;
-        }
-        33% {
-          opacity: 1;
-        }
-        66% {
-          opacity: 0.35;
-        }
-      }
-
       :root #starfield-a,
       :root #starfield-b,
       :root #starfield-c {
@@ -181,18 +149,6 @@
         z-index: 0;
         overflow: hidden;
         contain: strict;
-      }
-
-      /* will-change only applies when animation is actually running (desktop) */
-      @media (pointer: fine) and (prefers-reduced-motion: no-preference) {
-        #starfield-a::before,
-        #starfield-a::after,
-        #starfield-b::before,
-        #starfield-b::after,
-        #starfield-c::before,
-        #starfield-c::after {
-          will-change: opacity;
-        }
       }
 
       /* Disable the grain and scanline overlays on mobile to cut fixed-layer repaints */
@@ -382,7 +338,6 @@
         position: sticky;
         top: 0;
         z-index: 50;
-        backdrop-filter: blur(8px);
       }
 
       .controls-inner {
@@ -888,6 +843,9 @@
         flex-direction: column;
         opacity: 0;
         animation: fadeUp 0.5s forwards;
+        /* Skip rendering off-screen cards; `auto` remembers the real size once laid out */
+        content-visibility: auto;
+        contain-intrinsic-size: auto 460px;
       }
 
       /* Skip the per-card fade-in animation on mobile — it's costly when
@@ -956,7 +914,7 @@
       .collect-btn {
         width: 34px;
         height: 34px;
-        background: rgba(10, 10, 11, 0.55);
+        background: rgba(10, 10, 11, 0.65);
         border: 1px solid var(--rule-bright);
         color: var(--ink);
         cursor: pointer;
@@ -969,7 +927,6 @@
           border-color 0.2s,
           background-color 0.2s,
           transform 0.15s;
-        backdrop-filter: blur(2px);
       }
 
       [data-theme="light"] .collect-btn {
@@ -1417,7 +1374,6 @@
         letter-spacing: 0.18em;
         text-transform: uppercase;
         padding: 4px 9px;
-        backdrop-filter: blur(2px);
         pointer-events: none;
       }
 
@@ -1474,7 +1430,6 @@
         letter-spacing: 0.18em;
         text-transform: uppercase;
         padding: 4px 9px;
-        backdrop-filter: blur(2px);
         pointer-events: none;
       }
 
@@ -3237,9 +3192,15 @@
         // ============ BACK TO TOP ============
         const heroEl = document.querySelector(".hero");
 
+        let topBtnTicking = false;
         const updateTopBtn = () => {
-          const pastHero = window.scrollY > heroEl.offsetHeight;
-          topBtn.classList.toggle("visible", pastHero);
+          if (topBtnTicking) return;
+          topBtnTicking = true;
+          requestAnimationFrame(() => {
+            const pastHero = window.scrollY > heroEl.offsetHeight;
+            topBtn.classList.toggle("visible", pastHero);
+            topBtnTicking = false;
+          });
         };
 
         window.addEventListener("scroll", updateTopBtn, { passive: true });
@@ -3560,17 +3521,11 @@
          pseudo-elements across three #starfield divs.
          W × H covers 2560 × 1600 to fill any common viewport.
 
-         On mobile (pointer: coarse) or when prefers-reduced-motion is set,
-         stars are rendered static — no twinkle animation — to avoid
-         compositing thrash on low-power GPUs.                            */
+         Stars are static (no twinkle animation) — the random layout on
+         each load provides the variety without per-frame compositing.   */
       (function () {
         var isMobile = window.matchMedia("(pointer: coarse)").matches;
-        var prefersReduced = window.matchMedia(
-          "(prefers-reduced-motion: reduce)",
-        ).matches;
-        var staticOnly = isMobile || prefersReduced;
 
-        /* Fewer stars on mobile to further reduce paint cost */
         var W = 2560,
           H = 1600;
         var r = Math.random;
@@ -3614,52 +3569,32 @@
           return parts.join(", ");
         }
 
-        /* On mobile: halve star counts, drop to a single fixed opacity,
-           and skip animation entirely so no CSS keyframe compositing occurs. */
-        var css;
-        if (staticOnly) {
-          css = [
-            "#starfield-a::before { opacity: 0.7; box-shadow: " +
-              shadows(45, 0, 0.65, 0.85) +
-              "; }",
-            "#starfield-a::after  { opacity: 0.7; box-shadow: " +
-              shadows(20, 2, 0.6, 0.8) +
-              "; }",
-            "#starfield-b::before { opacity: 0.7; box-shadow: " +
-              shadows(40, 1, 0.65, 0.85) +
-              "; }",
-            "#starfield-b::after  { opacity: 0.7; box-shadow: " +
-              shadows(18, 2, 0.6, 0.8) +
-              "; }",
-            "#starfield-c::before { opacity: 0.7; box-shadow: " +
-              shadows(22, 2, 0.65, 0.85) +
-              "; }",
-            "#starfield-c::after  { opacity: 0.65; box-shadow: " +
-              shadows(10, 4, 0.55, 0.75) +
-              "; }",
-          ].join("\n");
-        } else {
-          css = [
-            "#starfield-a::before { animation: twinkle-a 8s ease-in-out infinite; box-shadow: " +
-              shadows(90, 0, 0.65, 0.85) +
-              "; }",
-            "#starfield-a::after  { animation: twinkle-b 11s ease-in-out infinite; box-shadow: " +
-              shadows(40, 2, 0.6, 0.8) +
-              "; }",
-            "#starfield-b::before { animation: twinkle-b 6s ease-in-out infinite; box-shadow: " +
-              shadows(80, 1, 0.65, 0.85) +
-              "; }",
-            "#starfield-b::after  { animation: twinkle-a 9s ease-in-out infinite; box-shadow: " +
-              shadows(36, 2, 0.6, 0.8) +
-              "; }",
-            "#starfield-c::before { animation: twinkle-c 10s ease-in-out infinite; box-shadow: " +
-              shadows(44, 2, 0.65, 0.85) +
-              "; }",
-            "#starfield-c::after  { animation: twinkle-a 13s ease-in-out infinite; box-shadow: " +
-              shadows(20, 4, 0.55, 0.75) +
-              "; }",
-          ].join("\n");
+        /* Halve star counts on mobile. Wider alpha ranges give the
+           layers a varied, "mid-twinkle" look without any animation. */
+        var k = isMobile ? 0.5 : 1;
+        function n(count) {
+          return Math.round(count * k);
         }
+        var css = [
+          "#starfield-a::before { box-shadow: " +
+            shadows(n(90), 0, 0.4, 0.95) +
+            "; }",
+          "#starfield-a::after  { box-shadow: " +
+            shadows(n(40), 2, 0.35, 0.85) +
+            "; }",
+          "#starfield-b::before { box-shadow: " +
+            shadows(n(80), 1, 0.4, 0.95) +
+            "; }",
+          "#starfield-b::after  { box-shadow: " +
+            shadows(n(36), 2, 0.35, 0.85) +
+            "; }",
+          "#starfield-c::before { box-shadow: " +
+            shadows(n(44), 2, 0.4, 0.9) +
+            "; }",
+          "#starfield-c::after  { box-shadow: " +
+            shadows(n(20), 4, 0.3, 0.75) +
+            "; }",
+        ].join("\n");
 
         var style = document.createElement("style");
         style.id = "starfield-dynamic";
