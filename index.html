@@ -1120,6 +1120,32 @@
         color: var(--red);
       }
 
+      /* Throbber shown above "Tuning the signal..." while episodes load.
+         The class is dropped automatically once JS replaces status.className. */
+      .status.loading::before {
+        content: "";
+        display: block;
+        width: 36px;
+        height: 36px;
+        margin: 0 auto 20px;
+        border: 2px solid var(--rule-bright);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: throb-spin 0.9s linear infinite;
+      }
+
+      @keyframes throb-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .status.loading::before {
+          animation-duration: 2.4s;
+        }
+      }
+
       /* ============ MODAL ============ */
       .modal-bg {
         display: none;
@@ -2082,7 +2108,7 @@
 
     <main class="grid-wrap">
       <div id="tz-grid" class="grid"></div>
-      <div id="tz-status" class="status">Tuning the signal...</div>
+      <div id="tz-status" class="status loading" role="status">Tuning the signal...</div>
     </main>
 
     <footer class="footer">
